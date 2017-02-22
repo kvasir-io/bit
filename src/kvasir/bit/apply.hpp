@@ -50,9 +50,14 @@ namespace bit
                                  mpl::list<U, T...>>
         {
         };
+	
+	template<typename T1, typename T2>
+	using less = mpl::bool_<(T1{}<T2{})>;
+
+
         template <typename T>
         using MakeSeperators =
-            MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<T>>;
+            MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<less,T>>;
 
         // an index action consists of an action (possibly merged) and
         // the inputs including masks which it needs
@@ -192,8 +197,8 @@ namespace bit
         struct MergeActionSteps<mpl::list<Ts...>>
         {
             using type = mpl::list<MergebitActionsT<
-                mpl::sort<mpl::flatten<Ts>,
-                              Detail::IndexedActionLess<mpl::_1, mpl::_2>>
+                mpl::sort<Detail::IndexedActionLess,mpl::flatten<Ts>
+                              >
                 // SortT<mpl::flatten<Ts>, mpl::Template<Detail::IndexedActionLess>>
                 >...>;
         };
@@ -212,7 +217,7 @@ namespace bit
         template <bool TopLevel, typename TAddress, unsigned Mask, typename TAccess, typename TR,
                   typename TAction, int Index>
         struct MakeIndexedActionImpl<
-            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, TAction>, Int<Index>>
+            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, TAction>, int_<Index>>
         {
             using type = IndexedAction<Action<FieldLocation<TAddress, Mask, TAccess, TR>, TAction>>;
         };
@@ -221,28 +226,28 @@ namespace bit
         template <bool TopLevel, typename TAddress, unsigned Mask, typename TAccess, typename TR,
                   int Index>
         struct MakeIndexedActionImpl<
-            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, WriteAction>, Int<Index>>
+            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, WriteAction>, int_<Index>>
         {
             static_assert(
                 TopLevel,
                 "runtime values can only be executed in an apply, they cannot be stored in a list");
             using type =
                 IndexedAction<Action<FieldLocation<TAddress, Mask, TAccess, TR>, WriteAction>,
-                              mpl::size_t<Index>>;
+                              mpl::uint_<Index>>;
         };
 
         // special case where there actually is expected input
         template <bool TopLevel, typename TAddress, unsigned Mask, typename TAccess, typename TR,
                   int Index>
         struct MakeIndexedActionImpl<
-            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, XorAction>, Int<Index>>
+            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, XorAction>, mpl::int_<Index>>
         {
             static_assert(
                 TopLevel,
                 "runtime values can only be executed in an apply, they cannot be stored in a list");
             using type =
                 IndexedAction<Action<FieldLocation<TAddress, Mask, TAccess, TR>, WriteAction>,
-                              mpl::size_t<Index>>;
+                              mpl::uint_<Index>>;
         };
 
         // special case where a list of actions is passed
@@ -265,13 +270,13 @@ namespace bit
         struct IsAddressPred
         {
             template <typename T>
-            struct apply : mpl::FalseType
+            struct apply : mpl::bool_<false>
             {
             };
             template <typename TAddress, unsigned Mask, typename TAccess, typename TFieldType,
                       typename Cmd>
             struct apply<Action<FieldLocation<TAddress, Mask, TAccess, TFieldType>, Cmd>>
-                : mpl::Value<bool, (I == GetAddress<TAddress>::value)>
+                : mpl::integral_constant<bool, (I == GetAddress<TAddress>::value)>
             {
             };
         };
@@ -279,16 +284,20 @@ namespace bit
         // takes an args list or tree, flattens it and removes all actions which are not reads
         template <typename... TArgList>
         using GetReadsT =
-            mpl::transform<mpl::remove_if<mpl::flatten<mpl::list<TArgList...>>,
-                                                  IsNotReadPred<mpl::_1>>,
-                               GetFieldLocation<mpl::_1>>;
+            mpl::transform<
+		GetFieldLocation,
+	    	mpl::remove_if<
+			IsNotReadPred,
+			mpl::flatten<
+				mpl::list<TArgList...>
+			>
+		>
+	    >;
 
         template <typename... T>
         constexpr bool noneRuntime()
         {
-            return mpl::size<mpl::remove_if<mpl::list<T...>,
-                                                    IsNotRuntimeWritePred<mpl::_1>>>::value ==
-                   0;
+            return mpl::size<mpl::remove_if<IsNotRuntimeWritePred,mpl::list<T...>>>::value ==0;
         }
 
         template <typename... T>
@@ -308,7 +317,7 @@ namespace bit
         };
 
         template <typename T>
-        struct GetReadMask : Int<0>
+        struct GetReadMask : mpl::int_<0>
         {
         };
 
@@ -320,11 +329,11 @@ namespace bit
         };
 
         template <typename T, typename = decltype(T::value_)>
-        DEBUG_OPTIMIZE unsigned argToUnsigned(T arg)
+        unsigned argToUnsigned(T arg)
         {
             return arg.value_;
         }
-        DEBUG_OPTIMIZE inline unsigned argToUnsigned(...) { return 0; }
+        inline unsigned argToUnsigned(...) { return 0; }
 
         // finder takes a list of lists of unsigned, each list represents a
         // pack of arguments to be ignored. All non ignored arguments will
@@ -335,13 +344,13 @@ namespace bit
         template <>
         struct Finder<mpl::list<>>
         {
-            DEBUG_OPTIMIZE unsigned operator()(...) { return 0; }
+            unsigned operator()(...) { return 0; }
         };
         template <typename... A>
         struct Finder<mpl::list<mpl::list<A...>>>
         {
             template <typename... T>
-            DEBUG_OPTIMIZE unsigned operator()(A..., unsigned a, T...)
+            unsigned operator()(A..., unsigned a, T...)
             {
                 return a;
             }
@@ -350,7 +359,7 @@ namespace bit
         struct Finder<mpl::list<mpl::list<A...>, mpl::list<B...>>>
         {
             template <typename... T>
-            DEBUG_OPTIMIZE unsigned operator()(A..., unsigned a, B..., unsigned b, T...)
+            unsigned operator()(A..., unsigned a, B..., unsigned b, T...)
             {
                 return a | b;
             }
@@ -359,12 +368,14 @@ namespace bit
         struct Finder<mpl::list<mpl::list<A...>, mpl::list<B...>, Rest...>>
         {
             template <typename... T>
-            DEBUG_OPTIMIZE unsigned operator()(A..., unsigned a, B..., unsigned b, T... t)
+            unsigned operator()(A..., unsigned a, B..., unsigned b, T... t)
             {
                 auto r = Finder<mpl::list<Rest...>>{};
                 return a | b | r(t...);
             }
         };
+
+
 
         template <typename TActionList, typename TInputIndexList, typename TRetType>
         struct Apply;
@@ -375,22 +386,21 @@ namespace bit
         {
             using ReturnType = FieldTuple<mpl::list<TRetAddresses...>, TRetLocations>;
             template <unsigned A>
-            DEBUG_OPTIMIZE
-                typename std::enable_if<mpl::contains<mpl::set<TRetAddresses...>,
-                                                          mpl::uint32_t<A>>::value>::type
+
+                typename std::enable_if<mpl::any<mpl::bind<std::is_same, mpl::uint_<A>>::template f,mpl::list<TRetAddresses...>>{}>
                 filterReturns(ReturnType & ret, unsigned in)
             {
                 ret.value_[sizeof...(TRetAddresses)-mpl::size<
-                    mpl::find<mpl::list<TRetAddresses...>,
-                                  std::is_same<mpl::uint32_t<A>, mpl::_1>>>::value] |= in;
+                    mpl::find_if<mpl::bind<std::is_same,mpl::uint_<A>>::template f,mpl::list<TRetAddresses...>
+		>>::value] |= in;
             }
             template <unsigned A>
-            DEBUG_OPTIMIZE void filterReturns(...)
+            void filterReturns(...)
             {
             }
 
             template <typename... T>
-            DEBUG_OPTIMIZE ReturnType operator()(T... args)
+            ReturnType operator()(T... args)
             {
                 ReturnType ret{{}}; // default constructed return
                 const unsigned a[]{0U, (filterReturns<Detail::GetAddress<TActions>::value>(
@@ -410,7 +420,7 @@ namespace bit
         struct NoReadApply<mpl::list<TActions...>, mpl::list<TInputIndexes...>>
         {
             template <typename... T>
-            DEBUG_OPTIMIZE void operator()(T... args)
+            void operator()(T... args)
             {
                 const unsigned a[]{0U, (ExecuteSeam<TActions, ::kvasir::Tag::User>{}(
                                             Finder<TInputIndexes>{}(args...)),
@@ -421,7 +431,7 @@ namespace bit
 
         // no read no runtime write apply
         template <typename... TActions>
-        DEBUG_OPTIMIZE void noReadNoRuntimeWriteApply(mpl::list<TActions...> *)
+        void noReadNoRuntimeWriteApply(mpl::list<TActions...> *)
         {
             const unsigned a[]{0U, ExecuteSeam<TActions, ::kvasir::Tag::User>{}(0U)...};
             ignore(a);
@@ -457,7 +467,7 @@ namespace bit
 
     // if apply contains reads return a FieldTuple
     template <typename... Args>
-    DEBUG_OPTIMIZE inline
+    inline
         typename std::enable_if<(mpl::size<Detail::GetReadsT<mpl::list<Args...>>>::value !=
                                  0),
                                 Detail::GetReturnType<Args...>>::type apply(Args... args)
@@ -482,7 +492,7 @@ namespace bit
 
     // if apply does not contain reads return is void
     template <typename... Args>
-    DEBUG_OPTIMIZE typename std::enable_if<Detail::NoReadsRuntimeWrites<Args...>::value>::type
+    typename std::enable_if<Detail::NoReadsRuntimeWrites<Args...>::value>::type
         apply(Args... args)
     {
         static_assert(Detail::ArgsToApplyArePlausible<Args...>::value,
@@ -502,7 +512,7 @@ namespace bit
 
     // if apply does not contain reads or runtime writes we can speed things up
     template <typename... Args>
-    DEBUG_OPTIMIZE
+    
         typename std::enable_if<Detail::AllCompileTime<Args...>::value>::type apply(Args... args)
     {
         static_assert(Detail::ArgsToApplyArePlausible<Args...>::value,
@@ -523,7 +533,7 @@ namespace bit
     inline void apply(mpl::list<>) {}
 
     template <typename TField, typename TField::DataType Value>
-    DEBUG_OPTIMIZE inline bool fieldEquals(FieldValue<TField, Value>)
+    inline bool fieldEquals(FieldValue<TField, Value>)
     {
         return apply(Action<TField, ReadAction>{}) == Value;
     }
