@@ -439,30 +439,38 @@ namespace bit
 
         template <typename... Ts>
         using GetReturnType =
-            FieldTuple<UniqueT<mpl::sort<
-                           mpl::transform<GetReadsT<Ts...>, mpl::quote<GetAddress>>>>,
+            FieldTuple<mpl::remove_adjacent<std::is_same, mpl::sort<std::is_same,
+                           mpl::transform<
+			   	GetAddress,
+				GetReadsT<Ts...>
+			   >>>,
                        GetReadsT<Ts...>>;
         template <typename T>
-        struct ArgToApplyIsPlausible : FalseType
+        struct ArgToApplyIsPlausible : mpl::bool_<false>
         {
         };
         template <typename L, typename A>
-        struct ArgToApplyIsPlausible<Action<L, A>> : TrueType
+        struct ArgToApplyIsPlausible<Action<L, A>> : mpl::bool_<true>
         {
         };
         template <>
-        struct ArgToApplyIsPlausible<SequencePoint> : TrueType
+        struct ArgToApplyIsPlausible<SequencePoint> : mpl::bool_<true>
         {
         };
-        template <typename T, typename... Ts>
-        struct ArgsToApplyArePlausible
-        {
-            using l = mpl::flatten<mpl::list<T, Ts...>>;
-            using type = mpl::mpl::bool_<
-                std::is_same<mpl::RepeatC<mpl::size<l>::value, mpl::TrueType>,
-                             mpl::transform<l, mpl::quote<ArgToApplyIsPlausible>>>::value>;
-            static constexpr int value = type::value;
+	template<typename R>
+        using id = R;
+	template <typename T, typename... Ts>
+        using ArgsToApplyArePlausible = mpl::all<id, mpl::transform<ArgToApplyIsPlausible, mpl::flatten<mpl::list<T, Ts...>>>>;
         };
+	//        template <typename T, typename... Ts>
+//        struct ArgsToApplyArePlausible
+//        {
+//            using l = mpl::flatten<mpl::list<T, Ts...>>;
+//            using type = mpl::bool_<
+//                std::is_same<mpl::RepeatC<mpl::size<l>::value, mpl::TrueType>,
+//                             mpl::transform<l, mpl::quote<ArgToApplyIsPlausible>>>::value>;
+//            static constexpr int value = type::value;
+//        };
     }
 
     // if apply contains reads return a FieldTuple
