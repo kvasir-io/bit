@@ -26,7 +26,7 @@ namespace kvasir
 namespace bit
 {
 
-    namespace Detail
+    namespace detail
     {
 
         template <typename TbitAction>
@@ -102,7 +102,7 @@ namespace bit
     }
 
     template <typename T, typename U>
-    struct ExecuteSeam : Detail::bitExec<T>
+    struct ExecuteSeam : detail::bitExec<T>
     {
     };
 }

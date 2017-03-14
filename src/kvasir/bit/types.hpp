@@ -46,44 +46,42 @@ namespace bit{
 	struct SpecialReadMode{};
 
 	template<unsigned A, unsigned WriteIgnoredIfZeroMask=0, unsigned WriteIgnoredIfOneMask = 0, typename TRegType = unsigned, typename TMode = NormalMode>
-	struct Address{
-		using Type = Address<A,WriteIgnoredIfZeroMask,WriteIgnoredIfOneMask,TRegType,TMode>;
-		static constexpr unsigned value = A;
-	};
+	struct Address{};
 
 	//write a compile time known value
 	template<unsigned I>
-	struct WriteLiteralAction{
-		static constexpr unsigned value = I;
-	};
+	struct WriteLiteralAction{};
 
 	//write a run time known value
-	struct WriteAction{
-		unsigned value_;
-	};
+	struct WriteAction{};
 
 	//read
-	struct ReadAction{
-
-	};
+	struct ReadAction{};
 
 	//xor a compile time known mask
 	template<unsigned I>
-	struct XorLiteralAction{
-		static constexpr unsigned value = I;
-	};
+	struct XorLiteralAction{};
 
 	//xor a run time known value
-	struct XorAction{
-		unsigned value_;
-	};
+	struct XorAction{};
 
 
 	template<typename TLocation, typename TAction>
-	struct Action : TAction {
+	struct Action {
 		template<typename... Ts>
-		constexpr Action(Ts...args):TAction{args...}{}
-		using Type = Action<TLocation,TAction>;
+		constexpr Action(Ts...args) :TAction{ args... } {}
+	};
+	template<typename TLocation>
+	struct Action<TLocation, WriteAction> {
+		template<typename... Ts>
+		constexpr Action(const unsigned in) :value_{ in } {}
+		unsigned value_;
+	};
+	template<typename TLocation>
+	struct Action<TLocation, XorAction> {
+		template<typename... Ts>
+		constexpr Action(const unsigned in) :value_{ in } {}
+		unsigned value_;
 	};
 
 	enum class ModifiedWriteValueType {
@@ -124,18 +122,12 @@ namespace bit{
 	using ROneToClearAccess = Access<AccessType::readWrite, ReadActionType::normal, ModifiedWriteValueType::oneToClear>;
 
 	template<typename TAddress, unsigned Mask, typename Access = ReadWriteAccess, typename TFieldType = unsigned>
-	struct FieldLocation{
-		using Type = FieldLocation<TAddress, Mask, Access, TFieldType>;
-		using DataType = TFieldType;
-	};
+	struct FieldLocation{};
 
 	template<typename T, typename U>
-	struct FieldLocationPair{
-		using Type = FieldLocationPair<T,U>;
-	};
+	struct FieldLocationPair{};
 
-	namespace Detail{
-		using namespace mpl;
+	namespace detail{
 		constexpr int positionOfFirstSetBit(unsigned in, int pos=0){
 			return (in & 0x01)?pos:positionOfFirstSetBit(in >> 1, pos + 1);
 		}
@@ -143,18 +135,18 @@ namespace bit{
 	
 	template<typename TFieldLocation, typename TFieldLocation::DataType Value>
 	struct FieldValue{
-		using Type = FieldValue<TFieldLocation, Value>;
 		operator typename TFieldLocation::DataType() const {
 			return Value;
 		}
 	};
 	template<typename TAddresses, typename TFieldLocation>
 	struct FieldTuple;		//see below for implementation in specialization
-	namespace Detail {
+
+	namespace detail {
 		template<typename Object, typename TFieldLocation>
 		struct GetFieldLocationIndex;
 		template<typename TA, typename TLocations, typename TFieldLocation>
-		struct GetFieldLocationIndex<FieldTuple<TA, TLocations>, TFieldLocation> : mpl::find_if<mpl::bind<std::is_same, TFieldLocation>::template f, TLocations> {};
+		struct GetFieldLocationIndex<FieldTuple<TA, TLocations>, TFieldLocation> : mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, TFieldLocation>,mpl::c::front>, TLocations> {};
 
 		template<typename Object, typename TFieldLocation>
 		using GetFieldLocationIndexT = typename GetFieldLocationIndex<Object, TFieldLocation>::Type;
@@ -167,15 +159,15 @@ namespace bit{
 		mpl::at<Index, mpl::list<TRs...>> get() const{
 			using namespace mpl;
 			using Address = mpl::uint_<mpl::at<Index, mpl::list<TAs...>>::value>;
-			constexpr unsigned index = sizeof...(Is) - mpl::size<mpl::find_if<mpl::bind<std::is_same, Address>::template f, mpl::list<mpl::uint_<Is>...>>>::value;
+			constexpr unsigned index = sizeof...(Is) - mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, Address>,mpl::c::size>, mpl::list<mpl::uint_<Is>...>>::value;
 			using ResultType = mpl::at<index, mpl::list<TRs...>>;
 			constexpr unsigned mask = mpl::at<index, mpl::list<mpl::uint_<Masks>...>>::value;
-			unsigned r = (value_[index] & mask) >> Detail::positionOfFirstSetBit(mask);
+			unsigned r = (value_[index] & mask) >> detail::positionOfFirstSetBit(mask);
 			return ResultType(r);
 		}
 		template<typename T>
-		auto operator[](T)->decltype(get<Detail::GetFieldLocationIndex<FieldTuple, T>::value>()) {
-			return get<Detail::GetFieldLocationIndex<FieldTuple, T>::value>();
+		auto operator[](T)->decltype(get<detail::GetFieldLocationIndex<FieldTuple, T>::value>()) {
+			return get<detail::GetFieldLocationIndex<FieldTuple, T>::value>();
 		}
 		template<typename... T>
 		static constexpr unsigned getFirst(unsigned i, T...) {
@@ -189,7 +181,7 @@ namespace bit{
 		using ConvertableTo = typename std::conditional < (sizeof...(TRs) == 1), mpl::at<0, mpl::list<TRs...>>, DoNotUse>::type;
 		operator ConvertableTo() {
 			constexpr unsigned mask = getFirst(Masks...);
-			return ConvertableTo((value_[0] & mask) >> Detail::positionOfFirstSetBit(mask));
+			return ConvertableTo((value_[0] & mask) >> detail::positionOfFirstSetBit(mask));
 		};
 	};
 	template<>
@@ -200,8 +192,8 @@ namespace bit{
 		return o.template get<I>();
 	}
 	template<typename T, typename TFieldTuple>
-	auto get(T, TFieldTuple o)->decltype(o.template get<Detail::GetFieldLocationIndex<TFieldTuple,T>::value>()) {
-		return o.template get<Detail::GetFieldLocationIndex<TFieldTuple, T>::value>();
+	auto get(T, TFieldTuple o)->decltype(o.template get<detail::GetFieldLocationIndex<TFieldTuple,T>::value>()) {
+		return o.template get<detail::GetFieldLocationIndex<TFieldTuple, T>::value>();
 	}
 
 	template<typename TFieldTuple, typename TLocation, typename TLocation::DataType Value>

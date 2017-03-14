@@ -22,7 +22,7 @@
 namespace kvasir{
 namespace bit{
 	template<typename T>
-	constexpr std::enable_if<Detail::IsWriteLiteral<T>::value> isolated(T){
+	constexpr std::enable_if<detail::IsWriteLiteral<T>::value> isolated(T){
 
 	}
 }

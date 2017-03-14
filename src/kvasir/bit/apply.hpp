@@ -28,7 +28,7 @@ namespace kvasir
 namespace bit
 {
 
-    namespace Detail
+    namespace detail
     {
         namespace br = mpl;
 
@@ -52,12 +52,12 @@ namespace bit
         };
 	
 	template<typename T1, typename T2>
-	using less = mpl::bool_<(T1{}<T2{})>;
+	using less = mpl::bool_<(T1::value<T2::value)>;
 
 
         template <typename T>
         using MakeSeperators =
-            MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<less,T>>;
+            MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<T, less>>;
 
         // an index action consists of an action (possibly merged) and
         // the inputs including masks which it needs
@@ -197,9 +197,7 @@ namespace bit
         struct MergeActionSteps<mpl::list<Ts...>>
         {
             using type = mpl::list<MergebitActionsT<
-                mpl::sort<Detail::IndexedActionLess,mpl::flatten<Ts>
-                              >
-                // SortT<mpl::flatten<Ts>, mpl::Template<Detail::IndexedActionLess>>
+                mpl::sort<mpl::flatten<Ts>, detail::IndexedActionLess>
                 >...>;
         };
 
@@ -287,24 +285,24 @@ namespace bit
             mpl::transform<
 		GetFieldLocation,
 	    	mpl::remove_if<
-			IsNotReadPred,
 			mpl::flatten<
 				mpl::list<TArgList...>
-			>
+			>,
+			IsNotReadPred
 		>
 	    >;
 
         template <typename... T>
         constexpr bool noneRuntime()
         {
-            return mpl::size<mpl::remove_if<IsNotRuntimeWritePred,mpl::list<T...>>>::value ==0;
+            return mpl::size<mpl::remove_if<mpl::list<T...>, IsNotRuntimeWritePred>>::value ==0;
         }
 
         template <typename... T>
         struct AllCompileTime
         {
             static constexpr bool value =
-                (mpl::size<Detail::GetReadsT<mpl::list<T...>>>::value == 0) &&
+                (mpl::size<detail::GetReadsT<mpl::list<T...>>>::value == 0) &&
                 noneRuntime<T...>();
         };
 
@@ -312,7 +310,7 @@ namespace bit
         struct NoReadsRuntimeWrites
         {
             static constexpr bool value =
-                (mpl::size<Detail::GetReadsT<mpl::list<T...>>>::value == 0) &&
+                (mpl::size<detail::GetReadsT<mpl::list<T...>>>::value == 0) &&
                 !noneRuntime<T...>();
         };
 
@@ -387,12 +385,10 @@ namespace bit
             using ReturnType = FieldTuple<mpl::list<TRetAddresses...>, TRetLocations>;
             template <unsigned A>
 
-                typename std::enable_if<mpl::any<mpl::bind<std::is_same, mpl::uint_<A>>::template f,mpl::list<TRetAddresses...>>{}>
+                typename std::enable_if<mpl::any<mpl::list<TRetAddresses...>, mpl::bind1<std::is_same, mpl::uint_<A>>::template f>::value>
                 filterReturns(ReturnType & ret, unsigned in)
             {
-                ret.value_[sizeof...(TRetAddresses)-mpl::size<
-                    mpl::find_if<mpl::bind<std::is_same,mpl::uint_<A>>::template f,mpl::list<TRetAddresses...>
-		>>::value] |= in;
+					ret.value_[mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, mpl::uint_<A>>, mpl::c::offset<mpl::uint_<sizeof...(TRetAddresses)>>>, mpl::list<TRetAddresses...>>::value] |= in;
             }
             template <unsigned A>
             void filterReturns(...)
@@ -403,7 +399,7 @@ namespace bit
             ReturnType operator()(T... args)
             {
                 ReturnType ret{{}}; // default constructed return
-                const unsigned a[]{0U, (filterReturns<Detail::GetAddress<TActions>::value>(
+                const unsigned a[]{0U, (filterReturns<detail::GetAddress<TActions>::value>(
                                             ret, ExecuteSeam<TActions, ::kvasir::Tag::User>{}(
                                                      Finder<TInputIndexes>{}(args...))),
                                         0U)...};
@@ -439,11 +435,11 @@ namespace bit
 
         template <typename... Ts>
         using GetReturnType =
-            FieldTuple<mpl::remove_adjacent<std::is_same, mpl::sort<std::is_same,
+            FieldTuple<mpl::remove_adjacent<mpl::sort<
                            mpl::transform<
 			   	GetAddress,
 				GetReadsT<Ts...>
-			   >>>,
+			   >, std::is_same>, std::is_same>,
                        GetReadsT<Ts...>>;
         template <typename T>
         struct ArgToApplyIsPlausible : mpl::bool_<false>
@@ -457,11 +453,8 @@ namespace bit
         struct ArgToApplyIsPlausible<SequencePoint> : mpl::bool_<true>
         {
         };
-	template<typename R>
-        using id = R;
-	template <typename T, typename... Ts>
-        using ArgsToApplyArePlausible = mpl::all<id, mpl::transform<ArgToApplyIsPlausible, mpl::flatten<mpl::list<T, Ts...>>>>;
-        };
+	template <typename... Ts>
+        using ArgsToApplyArePlausible = mpl::all<mpl::flatten<mpl::list<Ts...>>, ArgToApplyIsPlausible>;
 	//        template <typename T, typename... Ts>
 //        struct ArgsToApplyArePlausible
 //        {
@@ -476,63 +469,62 @@ namespace bit
     // if apply contains reads return a FieldTuple
     template <typename... Args>
     inline
-        typename std::enable_if<(mpl::size<Detail::GetReadsT<mpl::list<Args...>>>::value !=
+        typename std::enable_if<(mpl::c::call<mpl::c::count_if<mpl::lambda<detail::IsNotReadPred>>, mpl::flatten<mpl::list<Args...>>>::value >
                                  0),
-                                Detail::GetReturnType<Args...>>::type apply(Args... args)
+                                detail::GetReturnType<Args...>>::type apply(Args... args)
     {
-        static_assert(Detail::ArgsToApplyArePlausible<Args...>::value,
+        static_assert(detail::ArgsToApplyArePlausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         using IndexedActions =
-            mpl::transform<mpl::list<Args...>, mpl::BuildIndicesT<sizeof...(Args)>,
-                               mpl::quote<Detail::MakeIndexedAction>>;
+            mpl::c::call<mpl::c::transform<mpl::lambda<detail::MakeIndexedAction>>, mpl::list<Args...>, mpl::make_int_sequence<mpl::int_<sizeof...(Args)>>>;
         using FlattenedActions = mpl::flatten<IndexedActions>;
         using Steps = mpl::split<FlattenedActions, SequencePoint>;
-        using Merged = Detail::MergeActionStepsT<Steps>;
+        using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
-        using Functors = mpl::transform<Actions, mpl::quote<Detail::GetAction>>;
+        using Functors = mpl::transform<Actions, mpl::quote<detail::GetAction>>;
         using Inputs =
-            mpl::transform<Actions, mpl::quote<Detail::GetInputs>>; // list of lists of lits
+            mpl::transform<Actions, mpl::quote<detail::GetInputs>>; // list of lists of lits
                                                                             // of unsigned
                                                                             // seperators
-        Detail::Apply<Functors, Inputs, Detail::GetReturnType<Args...>> a{};
-        return a(Detail::argToUnsigned(args)...);
+        detail::Apply<Functors, Inputs, detail::GetReturnType<Args...>> a{};
+        return a(detail::argToUnsigned(args)...);
     }
 
     // if apply does not contain reads return is void
     template <typename... Args>
-    typename std::enable_if<Detail::NoReadsRuntimeWrites<Args...>::value>::type
+    typename std::enable_if<detail::NoReadsRuntimeWrites<Args...>::value>::type
         apply(Args... args)
     {
-        static_assert(Detail::ArgsToApplyArePlausible<Args...>::value,
+        static_assert(detail::ArgsToApplyArePlausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         using IndexedActions =
             mpl::transform<mpl::list<Args...>, mpl::BuildIndicesT<sizeof...(Args)>,
-                               mpl::quote<Detail::MakeIndexedAction>>;
+                               mpl::quote<detail::MakeIndexedAction>>;
         using FlattenedActions = mpl::flatten<IndexedActions>;
         using Steps = mpl::split<FlattenedActions, SequencePoint>;
-        using Merged = Detail::MergeActionStepsT<Steps>;
+        using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
-        using Functors = mpl::transform<Actions, mpl::quote<Detail::GetAction>>;
-        using Inputs = mpl::transform<Actions, mpl::quote<Detail::GetInputs>>;
-        Detail::NoReadApply<Functors, Inputs> a{};
-        a(Detail::argToUnsigned(args)...);
+        using Functors = mpl::transform<Actions, mpl::quote<detail::GetAction>>;
+        using Inputs = mpl::transform<Actions, mpl::quote<detail::GetInputs>>;
+        detail::NoReadApply<Functors, Inputs> a{};
+        a(detail::argToUnsigned(args)...);
     }
 
     // if apply does not contain reads or runtime writes we can speed things up
     template <typename... Args>
     
-        typename std::enable_if<Detail::AllCompileTime<Args...>::value>::type apply(Args... args)
+        typename std::enable_if<detail::AllCompileTime<Args...>::value>::type apply(Args... args)
     {
-        static_assert(Detail::ArgsToApplyArePlausible<Args...>::value,
+        static_assert(detail::ArgsToApplyArePlausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         // using IndexedActions = mpl::transform<mpl::list<Args...>,
-        // mpl::BuildIndicesT<sizeof...(Args)>, mpl::quote<Detail::MakeIndexedAction>>;
+        // mpl::BuildIndicesT<sizeof...(Args)>, mpl::quote<detail::MakeIndexedAction>>;
         using FlattenedActions = mpl::flatten<mpl::list<Args...>>;
         using Steps = mpl::split<FlattenedActions, SequencePoint>;
-        using Merged = Detail::MergeActionStepsT<Steps>;
+        using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
-        // using Functors = mpl::transform<Actions, mpl::quote<Detail::GetAction>>;
-        Detail::noReadNoRuntimeWriteApply((Actions *)nullptr);
+        // using Functors = mpl::transform<Actions, mpl::quote<detail::GetAction>>;
+        detail::noReadNoRuntimeWriteApply((Actions *)nullptr);
     }
 
     // no parameters is allowed because it could be used in machine generated code

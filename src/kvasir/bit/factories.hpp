@@ -24,7 +24,7 @@
 
 namespace kvasir{
 namespace bit{
-	namespace Detail{
+	namespace detail{
 		using namespace mpl;
 
 		//factory for write literal
@@ -98,7 +98,7 @@ namespace bit{
 				TFieldType>,
 				WriteLiteralAction < (1 << positionOfFirstSetBit(Mask)) >> ;
 			static_assert(onlyOneBitSet(Mask),"bit::reset only works on single bit that are marked as set to clear");
-			static_assert(Detail::IsSetToClear<FieldLocation<TAddress, Mask, Access, TFieldType >>::value, "Access violation: bit::reset only works on set to clear bit");
+			static_assert(detail::IsSetToClear<FieldLocation<TAddress, Mask, Access, TFieldType >>::value, "Access violation: bit::reset only works on set to clear bit");
 		};
 
 		template<typename TLocation>
@@ -108,7 +108,7 @@ namespace bit{
 
 //Action factories which turn a FieldLocation into an Action
 	template<typename T>
-	constexpr inline std::enable_if<Detail::IsFieldLocation<T>::value,Action<T,ReadAction>>
+	constexpr inline std::enable_if<detail::IsFieldLocation<T>::value,Action<T,ReadAction>>
 	read(T){
 		return {};
 	}
@@ -119,7 +119,7 @@ namespace bit{
 	}
 
 	template<typename T>
-	constexpr std::enable_if<Detail::IsFieldLocation<T>::value,Detail::SetT<T>>
+	constexpr std::enable_if<detail::IsFieldLocation<T>::value,detail::SetT<T>>
 	set(T){
 		return {};
 	}
@@ -130,7 +130,7 @@ namespace bit{
 	}
 
 	template<typename T>
-	constexpr std::enable_if<Detail::IsFieldLocation<T>::value,Detail::ClearT<T>>
+	constexpr std::enable_if<detail::IsFieldLocation<T>::value,detail::ClearT<T>>
 	clear(T){
 		return {};
 	}
@@ -141,9 +141,9 @@ namespace bit{
 	}
 
 	template<typename T>
-	constexpr std::enable_if<Detail::IsFieldLocation<T>::value,Detail::Reset<T>>
+	constexpr std::enable_if<detail::IsFieldLocation<T>::value,detail::Reset<T>>
 	reset(T){
-		static_assert(Detail::IsSetToClear<T>::value,"Access violation: bit::reset only works on set to clear bit");
+		static_assert(detail::IsSetToClear<T>::value,"Access violation: bit::reset only works on set to clear bit");
 		return {};
 	}
 
@@ -156,10 +156,10 @@ namespace bit{
 	//Write of runtime value
 	//T must be bit location or function will be removed from overload set
 	template<typename T>
-	constexpr inline std::enable_if<Detail::IsFieldLocation<T>::value,Action<T,WriteAction>>
-	write(T,Detail::GetFieldTypeT<T> in){
-		static_assert(Detail::IsWritable<T>::value,"Access violation: The FieldLocation provided is not marked as writable");
-		return Action<T, WriteAction>{Detail::GetMask<T>::value & (unsigned(in) << Detail::maskStartsAt(Detail::GetMask<T>::value))};
+	constexpr inline std::enable_if<detail::IsFieldLocation<T>::value,Action<T,WriteAction>>
+	write(T,detail::GetFieldTypeT<T> in){
+		static_assert(detail::IsWritable<T>::value,"Access violation: The FieldLocation provided is not marked as writable");
+		return Action<T, WriteAction>{detail::GetMask<T>::value & (unsigned(in) << detail::maskStartsAt(detail::GetMask<T>::value))};
 	}
 
 	//compile time value
@@ -167,10 +167,10 @@ namespace bit{
 	//U mst be compile time value or function will be removed from overload set
 	template<typename T, typename U>
 	constexpr inline std::enable_if<
-		(Detail::IsFieldLocation<T>::value && mpl::is_integral<U>{}),
-		Detail::WriteT<T, Detail::ValueToUnsigned<U>::value>>
+		(detail::IsFieldLocation<T>::value && mpl::is_integral<U>{}),
+		detail::WriteT<T, detail::ValueToUnsigned<U>::value>>
 	write(T, U) {
-		static_assert(Detail::WriteLocationAndCompileTimeValueTypeAreSame<T, U>::value, "type mismatch: the FieldLocation field type and the compile time Value type must be the same");
+		static_assert(detail::WriteLocationAndCompileTimeValueTypeAreSame<T, U>::value, "type mismatch: the FieldLocation field type and the compile time Value type must be the same");
 		return { };
 	}
 	

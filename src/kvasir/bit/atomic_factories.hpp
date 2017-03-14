@@ -25,19 +25,19 @@ namespace bit{
 	// warning these are still a work in progress!
 
 	template<typename T>
-	constexpr std::enable_if<Detail::IsWriteLiteral<T>::value> atomic(T){
+	constexpr std::enable_if<detail::IsWriteLiteral<T>::value> atomic(T){
 
 	}
 	template<typename T>
-	constexpr std::enable_if<Detail::IsWriteRuntime<T>::value> atomic(T in){
+	constexpr std::enable_if<detail::IsWriteRuntime<T>::value> atomic(T in){
 
 	}
 	template<typename T, typename U, typename...Ts>
-	constexpr std::enable_if<Detail::IsWriteLiteral<T>::value> atomic(T in){
+	constexpr std::enable_if<detail::IsWriteLiteral<T>::value> atomic(T in){
 
 	}
 	template<typename T, typename U, typename...Ts>
-	constexpr std::enable_if<Detail::IsWriteRuntime<T>::value> atomic(T in){
+	constexpr std::enable_if<detail::IsWriteRuntime<T>::value> atomic(T in){
 
 	}
 

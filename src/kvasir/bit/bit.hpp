@@ -34,12 +34,12 @@ namespace kvasir {
 
 		//factory for compile time values
 		template<unsigned I>
-		constexpr mpl::Value<unsigned, I> value(){
-			return mpl::Value<unsigned, I>{};
+		constexpr mpl::uint_<I> value(){
+			return {};
 		}
 		template<typename T, T I>
-		constexpr mpl::Value<T,I> value(){
-			return mpl::Value<T,I>{};
+		constexpr mpl::uint_<I> value(){
+			return {};
 		}
 
 		//bit helpers

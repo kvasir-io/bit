@@ -27,7 +27,7 @@ namespace bit{
 	constexpr unsigned maskFromRange(int high, int low, Is...args){
 		return maskFromRange(high,low) | maskFromRange(args...);
 	}
-	namespace Detail{
+	namespace detail{
 		using namespace mpl;
 
 		constexpr int maskStartsAt(unsigned mask, int bitNum = 0) {
@@ -175,17 +175,19 @@ namespace bit{
 		template<typename TLeft, typename TRight>
 		struct bitActionLess;
 		template<typename T1, typename U1, typename T2, typename U2>
-		struct bitActionLess< bit::Action<T1,U1>, bit::Action<T2,U2> > : mpl::bool_<(GetAddress<T1>::value < GetAddress<T2>::value)>{};
-		using bitActionLessP = mpl::bind<bitActionLess>;
+		struct bitActionLess< bit::Action<T1,U1>, bit::Action<T2,U2> > {
+			using type = mpl::bool_<(GetAddress<T1>::value < GetAddress<T2>::value)>;
+		};
+		using bitActionLessP = mpl::bind_t<bitActionLess>;
 
 		//predicate returns true if action is a read
 		template<typename T>
-		struct IsReadPred : std::false_type {};
+		struct IsReadPred : mpl::bool_<false> {};
 		template<typename A>
-		struct IsReadPred< bit::Action<A,ReadAction> > : std::true_type{};
+		struct IsReadPred< bit::Action<A,ReadAction> > : mpl::bool_<true>{};
 
 		template<typename T>
-		struct IsNotReadPred : std::integral_constant<bool,(!IsReadPred<T>::type::value)>{};
+		using IsNotReadPred = mpl::bool_<(!IsReadPred<T>::value)>;
 		
 		//predicate returns true if action is a read
 		template<typename T>
