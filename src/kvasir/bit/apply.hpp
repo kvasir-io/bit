@@ -478,12 +478,12 @@ namespace bit
         using IndexedActions =
             mpl::c::call<mpl::c::transform<mpl::lambda<detail::MakeIndexedAction>>, mpl::list<Args...>, mpl::make_int_sequence<mpl::int_<sizeof...(Args)>>>;
         using FlattenedActions = mpl::flatten<IndexedActions>;
-        using Steps = mpl::split<FlattenedActions, SequencePoint>;
+        using Steps = mpl::split_if<FlattenedActions, mpl::bind1<std::is_same, SequencePoint>::template f>;
         using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
-        using Functors = mpl::transform<Actions, mpl::quote<detail::GetAction>>;
+        using Functors = mpl::transform<detail::GetAction, Actions>;
         using Inputs =
-            mpl::transform<Actions, mpl::quote<detail::GetInputs>>; // list of lists of lits
+            mpl::transform<detail::GetInputs, Actions>; // list of lists of lits
                                                                             // of unsigned
                                                                             // seperators
         detail::Apply<Functors, Inputs, detail::GetReturnType<Args...>> a{};
@@ -498,14 +498,13 @@ namespace bit
         static_assert(detail::ArgsToApplyArePlausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         using IndexedActions =
-            mpl::transform<mpl::list<Args...>, mpl::BuildIndicesT<sizeof...(Args)>,
-                               mpl::quote<detail::MakeIndexedAction>>;
+            mpl::transform<detail::MakeIndexedAction, mpl::list<Args...>, mpl::make_int_sequence<mpl::int_<sizeof...(Args)>>>;
         using FlattenedActions = mpl::flatten<IndexedActions>;
-        using Steps = mpl::split<FlattenedActions, SequencePoint>;
+		using Steps = mpl::split_if<FlattenedActions, mpl::bind1<std::is_same, SequencePoint>::template f>;
         using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
-        using Functors = mpl::transform<Actions, mpl::quote<detail::GetAction>>;
-        using Inputs = mpl::transform<Actions, mpl::quote<detail::GetInputs>>;
+        using Functors = mpl::transform<detail::GetAction, Actions>;
+        using Inputs = mpl::transform<detail::GetInputs, Actions>;
         detail::NoReadApply<Functors, Inputs> a{};
         a(detail::argToUnsigned(args)...);
     }
@@ -520,7 +519,7 @@ namespace bit
         // using IndexedActions = mpl::transform<mpl::list<Args...>,
         // mpl::BuildIndicesT<sizeof...(Args)>, mpl::quote<detail::MakeIndexedAction>>;
         using FlattenedActions = mpl::flatten<mpl::list<Args...>>;
-        using Steps = mpl::split<FlattenedActions, SequencePoint>;
+		using Steps = mpl::split_if<FlattenedActions, mpl::bind1<std::is_same, SequencePoint>::template f>;
         using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
         // using Functors = mpl::transform<Actions, mpl::quote<detail::GetAction>>;
