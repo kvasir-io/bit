@@ -156,12 +156,12 @@ namespace bit{
 	struct FieldTuple<mpl::list<mpl::uint_<Is>...>,mpl::list<FieldLocation<TAs,Masks,TAccesss,TRs>...>>{
 		unsigned value_[sizeof...(Is)];
 		template<std::size_t Index>
-		mpl::at<Index, mpl::list<TRs...>> get() const{
+		mpl::at<mpl::list<TRs...>, Index> get() const{
 			using namespace mpl;
-			using Address = mpl::uint_<mpl::at<Index, mpl::list<TAs...>>::value>;
+			using Address = mpl::uint_<mpl::at<mpl::list<TAs...>, Index>::value>;
 			constexpr unsigned index = sizeof...(Is) - mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, Address>,mpl::c::size>, mpl::list<mpl::uint_<Is>...>>::value;
-			using ResultType = mpl::at<index, mpl::list<TRs...>>;
-			constexpr unsigned mask = mpl::at<index, mpl::list<mpl::uint_<Masks>...>>::value;
+			using ResultType = mpl::at<mpl::list<TRs...>, index>;
+			constexpr unsigned mask = mpl::at<mpl::list<mpl::uint_<Masks>...>, index>::value;
 			unsigned r = (value_[index] & mask) >> detail::positionOfFirstSetBit(mask);
 			return ResultType(r);
 		}
@@ -178,7 +178,7 @@ namespace bit{
 			DoNotUse(T){}
 		};
 		//implicitly convertible to the field type only if there is just one field
-		using ConvertableTo = typename std::conditional < (sizeof...(TRs) == 1), mpl::at<0, mpl::list<TRs...>>, DoNotUse>::type;
+		using ConvertableTo = typename std::conditional < (sizeof...(TRs) == 1), mpl::at<mpl::list<TRs...>,0>, DoNotUse>::type;
 		operator ConvertableTo() {
 			constexpr unsigned mask = getFirst(Masks...);
 			return ConvertableTo((value_[0] & mask) >> detail::positionOfFirstSetBit(mask));
