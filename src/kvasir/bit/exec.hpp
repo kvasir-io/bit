@@ -30,7 +30,7 @@ namespace bit
     {
 
         template <typename TbitAction>
-        struct bitExec;
+        struct Exec;
 
         template <typename TLocation, unsigned ClearMask, unsigned SetMask>
         struct GenericReadMaskOrWrite
@@ -61,7 +61,7 @@ namespace bit
         // write literal with read modify write
         template <typename TAddress, unsigned Mask, typename Access, typename FieldType,
                   unsigned Data>
-        struct bitExec<bit::Action<FieldLocation<TAddress, Mask, Access, FieldType>,
+        struct Exec<Action<FieldLocation<TAddress, Mask, Access, FieldType>,
                                              WriteLiteralAction<Data>>>
             : GenericReadMaskOrWrite<FieldLocation<TAddress, Mask, Access, FieldType>, Mask, Data>
         {
@@ -69,15 +69,15 @@ namespace bit
         };
 
         template <typename TAddress, unsigned Mask, typename Access, typename FieldType>
-        struct bitExec<
-            bit::Action<FieldLocation<TAddress, Mask, Access, FieldType>, WriteAction>>
+        struct Exec<
+            Action<FieldLocation<TAddress, Mask, Access, FieldType>, WriteAction>>
             : GenericReadMaskOrWrite<FieldLocation<TAddress, Mask, Access, FieldType>, Mask, 0>
         {
         };
 
         template <typename TAddress, unsigned Mask, typename Access, typename FieldType>
-        struct bitExec<
-            bit::Action<FieldLocation<TAddress, Mask, Access, FieldType>, ReadAction>>
+        struct Exec<
+            Action<FieldLocation<TAddress, Mask, Access, FieldType>, ReadAction>>
         {
             unsigned operator()(unsigned in = 0)
             {
@@ -86,7 +86,7 @@ namespace bit
         };
         template <typename TAddress, unsigned Mask, typename Access, typename FieldType,
                   unsigned Data>
-        struct bitExec<bit::Action<FieldLocation<TAddress, Mask, Access, FieldType>,
+        struct Exec<Action<FieldLocation<TAddress, Mask, Access, FieldType>,
                                              XorLiteralAction<Data>>>
             : GenericReadMaskOrWrite<FieldLocation<TAddress, Mask, Access, FieldType>, Mask, Data>
         {
@@ -102,7 +102,7 @@ namespace bit
     }
 
     template <typename T, typename U>
-    struct ExecuteSeam : detail::bitExec<T>
+    struct ExecuteSeam : detail::Exec<T>
     {
     };
 }

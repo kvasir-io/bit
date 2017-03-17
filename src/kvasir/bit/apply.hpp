@@ -16,6 +16,7 @@
  * limitations under the License.
 ****************************************************************************/
 #pragma once
+#include "apply_impl.hpp"
 #include "tags.hpp"
 #include "exec.hpp"
 #include "kvasir/mpl/mpl.hpp"
@@ -30,7 +31,6 @@ namespace bit
 
     namespace detail
     {
-        namespace br = mpl;
 
         template <std::size_t I, typename O, typename A, typename L>
         struct MakeSeperatorsImpl
@@ -38,26 +38,21 @@ namespace bit
             using type = O;
         };
         template <std::size_t I, typename... O, typename... A, typename... T>
-        struct MakeSeperatorsImpl<I, br::list<O...>, br::list<A...>, br::list<br::uint_<I>, T...>>
-            : MakeSeperatorsImpl<(I + 1), br::list<O..., br::list<A...>>, br::list<>,
-                                 br::list<T...>>
+        struct MakeSeperatorsImpl<I, mpl::list<O...>, mpl::list<A...>, mpl::list<mpl::uint_<I>, T...>>
+            : MakeSeperatorsImpl<(I + 1), mpl::list<O..., mpl::list<A...>>, mpl::list<>,
+                                 mpl::list<T...>>
         {
         };
 
         template <std::size_t I, typename... O, typename... A, typename U, typename... T>
-        struct MakeSeperatorsImpl<I, br::list<O...>, mpl::list<A...>, mpl::list<U, T...>>
+        struct MakeSeperatorsImpl<I, mpl::list<O...>, mpl::list<A...>, mpl::list<U, T...>>
             : MakeSeperatorsImpl<I + 1, mpl::list<O...>, mpl::list<A..., unsigned>,
                                  mpl::list<U, T...>>
         {
         };
-	
-	template<typename T1, typename T2>
-	using less = mpl::bool_<(T1::value<T2::value)>;
-
 
         template <typename T>
-        using MakeSeperators =
-            MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<T, less>>;
+        using MakeSeperators = MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<T, mpl::less_than>>;
 
         // an index action consists of an action (possibly merged) and
         // the inputs including masks which it needs
@@ -279,41 +274,6 @@ namespace bit
             };
         };
 
-        // takes an args list or tree, flattens it and removes all actions which are not reads
-        template <typename... TArgList>
-        using GetReadsT =
-            mpl::transform<		
-	    	mpl::remove_if<
-			mpl::flatten<
-				mpl::list<TArgList...>
-			>,
-			IsNotReadPred
-			>, 
-			GetFieldLocation
-	    >;
-
-        template <typename... T>
-        constexpr bool noneRuntime()
-        {
-            return mpl::size<mpl::remove_if<mpl::list<T...>, IsNotRuntimeWritePred>>::value ==0;
-        }
-
-        template <typename... T>
-        struct AllCompileTime
-        {
-            static constexpr bool value =
-                (mpl::size<detail::GetReadsT<mpl::list<T...>>>::value == 0) &&
-                noneRuntime<T...>();
-        };
-
-        template <typename... T>
-        struct NoReadsRuntimeWrites
-        {
-            static constexpr bool value =
-                (mpl::size<detail::GetReadsT<mpl::list<T...>>>::value == 0) &&
-                !noneRuntime<T...>();
-        };
-
         template <typename T>
         struct GetReadMask : mpl::int_<0>
         {
@@ -433,47 +393,15 @@ namespace bit
             ignore(a);
         }
 
-        template <typename... Ts>
-        using GetReturnType =
-            FieldTuple<mpl::remove_adjacent<mpl::sort<
-                           mpl::transform<
-			   	GetReadsT<Ts...>,
-				GetAddress
-			   >, std::is_same>, std::is_same>,
-                       GetReadsT<Ts...>>;
-        template <typename T>
-        struct ArgToApplyIsPlausible : mpl::bool_<false>
-        {
-        };
-        template <typename L, typename A>
-        struct ArgToApplyIsPlausible<Action<L, A>> : mpl::bool_<true>
-        {
-        };
-        template <>
-        struct ArgToApplyIsPlausible<SequencePoint> : mpl::bool_<true>
-        {
-        };
-	template <typename... Ts>
-        using ArgsToApplyArePlausible = mpl::all<mpl::flatten<mpl::list<Ts...>>, ArgToApplyIsPlausible>;
-	//        template <typename T, typename... Ts>
-//        struct ArgsToApplyArePlausible
-//        {
-//            using l = mpl::flatten<mpl::list<T, Ts...>>;
-//            using type = mpl::bool_<
-//                std::is_same<mpl::RepeatC<mpl::size<l>::value, mpl::TrueType>,
-//                             mpl::transform<l, mpl::quote<ArgToApplyIsPlausible>>>::value>;
-//            static constexpr int value = type::value;
-//        };
     }
 
     // if apply contains reads return a FieldTuple
     template <typename... Args>
-    inline
-        typename std::enable_if<(mpl::c::call<mpl::c::count_if<mpl::lambda<detail::IsNotReadPred>>, mpl::flatten<mpl::list<Args...>>>::value >
-                                 0),
-                                detail::GetReturnType<Args...>>::type apply(Args... args)
+    inline typename std::enable_if<(detail::num_reads<Args...>::value > 0),
+                                detail::return_type_of_apply<Args...>>::type 
+		apply(Args... args)
     {
-        static_assert(detail::ArgsToApplyArePlausible<Args...>::value,
+        static_assert(detail::args_to_apply_are_plausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         using IndexedActions =
             mpl::c::call<mpl::c::transform<mpl::lambda<detail::MakeIndexedAction>>, mpl::list<Args...>, mpl::make_int_sequence<mpl::int_<sizeof...(Args)>>>;
@@ -486,16 +414,16 @@ namespace bit
             mpl::transform<Actions, detail::GetInputs>; // list of lists of lits
                                                                             // of unsigned
                                                                             // seperators
-        detail::Apply<Functors, Inputs, detail::GetReturnType<Args...>> a{};
+        detail::Apply<Functors, Inputs, detail::return_type_of_apply<Args...>> a{};
         return a(detail::argToUnsigned(args)...);
     }
 
     // if apply does not contain reads return is void
     template <typename... Args>
-    typename std::enable_if<detail::NoReadsRuntimeWrites<Args...>::value>::type
+    typename std::enable_if<detail::no_reads_but_runtime_writes<Args...>::value>::type
         apply(Args... args)
     {
-        static_assert(detail::ArgsToApplyArePlausible<Args...>::value,
+        static_assert(detail::args_to_apply_are_plausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         using IndexedActions =
             mpl::c::call<mpl::c::zip_with<mpl::lambda<detail::MakeIndexedAction>>, mpl::list<Args...>, mpl::make_int_sequence<mpl::int_<sizeof...(Args)>>>;
@@ -511,10 +439,9 @@ namespace bit
 
     // if apply does not contain reads or runtime writes we can speed things up
     template <typename... Args>
-    
-        typename std::enable_if<detail::AllCompileTime<Args...>::value>::type apply(Args... args)
+    typename std::enable_if<detail::all_compile_time<Args...>::value>::type apply(Args... args)
     {
-        static_assert(detail::ArgsToApplyArePlausible<Args...>::value,
+        static_assert(detail::args_to_apply_are_plausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         // using IndexedActions = mpl::transform<mpl::list<Args...>,
         // mpl::BuildIndicesT<sizeof...(Args)>, mpl::quote<detail::MakeIndexedAction>>;

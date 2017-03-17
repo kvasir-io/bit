@@ -147,7 +147,7 @@ namespace bit{
 				using type = mpl::uint_<A>;
 			};
 		template<typename TAddress, unsigned Mask, typename TAccess, typename TFiledType>
-			struct GetAddress<FieldLocation<TAddress, Mask, TAccess, TFiledType>> : GetAddress<TAddress> {};
+		struct GetAddress<FieldLocation<TAddress, Mask, TAccess, TFiledType>> : GetAddress<TAddress> {};
 		template<typename TReadLoc, typename TWriteLoc>
 		struct GetAddress<FieldLocationPair<TReadLoc,TWriteLoc>> {
 			static constexpr unsigned value = TReadLoc::value;
@@ -175,7 +175,7 @@ namespace bit{
 		template<typename TLeft, typename TRight>
 		struct bitActionLess;
 		template<typename T1, typename U1, typename T2, typename U2>
-		struct bitActionLess< bit::Action<T1,U1>, bit::Action<T2,U2> > {
+		struct bitActionLess< Action<T1,U1>, Action<T2,U2> > {
 			using type = mpl::bool_<(GetAddress<T1>::value < GetAddress<T2>::value)>;
 		};
 		using bitActionLessP = mpl::bind_t<bitActionLess>;
@@ -184,19 +184,14 @@ namespace bit{
 		template<typename T>
 		struct IsReadPred : mpl::bool_<false> {};
 		template<typename A>
-		struct IsReadPred< bit::Action<A,ReadAction> > : mpl::bool_<true>{};
-
-		template<typename T>
-		using IsNotReadPred = mpl::bool_<(!IsReadPred<T>::value)>;
+		struct IsReadPred< Action<A,ReadAction> > : mpl::bool_<true>{};
 		
 		//predicate returns true if action is a read
 		template<typename T>
-		struct IsRuntimeWritePred : std::false_type {};
+		struct IsRuntimeWritePred : mpl::bool_<false> {};
 		template<typename A>
-		struct IsRuntimeWritePred< bit::Action<A, WriteAction> > : std::true_type {};
-		
-		template<typename T>
-		struct IsNotRuntimeWritePred : std::integral_constant<bool, (!IsRuntimeWritePred<T>::type::value)> {};
+		struct IsRuntimeWritePred< Action<A, WriteAction> > : mpl::bool_<true> {};
+
 
 		template<typename T>
 		struct GetMask;
