@@ -443,13 +443,11 @@ namespace bit
     {
         static_assert(detail::args_to_apply_are_plausible<Args...>::value,
                       "one of the supplied arguments is not supported");
-        // using IndexedActions = mpl::transform<mpl::list<Args...>,
-        // mpl::BuildIndicesT<sizeof...(Args)>, mpl::quote<detail::MakeIndexedAction>>;
         using FlattenedActions = mpl::flatten<mpl::list<Args...>>;
 		using Steps = mpl::split_if<FlattenedActions, mpl::bind1<std::is_same, SequencePoint>::template f>;
         using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
-        // using Functors = mpl::transform<Actions, mpl::quote<detail::GetAction>>;
+        using Functors = mpl::transform<Actions, detail::GetAction>;
         detail::noReadNoRuntimeWriteApply((Actions *)nullptr);
     }
 
