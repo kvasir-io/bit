@@ -124,6 +124,15 @@ namespace bit{
 	template<typename TAddress, unsigned Mask, typename Access = ReadWriteAccess, typename TFieldType = unsigned>
 	struct FieldLocation{};
 
+	namespace detail {
+		template<typename T>
+		struct get_field_data_type;
+		template<typename TAddress, unsigned Mask, typename Access, typename TFieldType>
+		struct get_field_data_type<FieldLocation<TAddress, Mask, Access, TFieldType>> {
+			using type = TFieldType;
+		};
+	}
+
 	template<typename T, typename U>
 	struct FieldLocationPair{};
 
@@ -133,9 +142,9 @@ namespace bit{
 		}
 	}
 	
-	template<typename TFieldLocation, typename TFieldLocation::DataType Value>
+	template<typename TFieldLocation, typename detail::get_field_data_type<TFieldLocation>::type Value>
 	struct FieldValue{
-		operator typename TFieldLocation::DataType() const {
+		operator typename detail::get_field_data_type<TFieldLocation>::type() const {
 			return Value;
 		}
 	};
