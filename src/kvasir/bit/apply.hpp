@@ -71,9 +71,9 @@ namespace bit
         };
 
         template <typename F, typename A>
-        struct GetAction<Action<F, A>>
+        struct GetAction<action<F, A>>
         {
-            using type = Action<F, A>;
+            using type = action<F, A>;
         };
 
         template <typename T>
@@ -91,14 +91,14 @@ namespace bit
         struct IndexedActionLess;
         template <typename T1, typename U1, typename T2, typename U2, typename... TInputs1,
                   typename... TInputs2>
-        struct IndexedActionLess<IndexedAction<Action<T1, U1>, TInputs1...>,
-                                 IndexedAction<Action<T2, U2>, TInputs2...>>
-            : mpl::bool_<(GetAddress<T1>::value < GetAddress<T2>::value)>
+        struct IndexedActionLess<IndexedAction<action<T1, U1>, TInputs1...>,
+                                 IndexedAction<action<T2, U2>, TInputs2...>>
+            : mpl::bool_<(get_address<T1>::value < get_address<T2>::value)>
         {
         };
         template <typename T1, typename U1, typename T2, typename U2>
-        struct IndexedActionLess<Action<T1, U1>, Action<T2, U2>>
-            : mpl::bool_<(GetAddress<T1>::value < GetAddress<T2>::value)>
+        struct IndexedActionLess<action<T1, U1>, action<T2, U2>>
+            : mpl::bool_<(get_address<T1>::value < get_address<T2>::value)>
         {
         };
 
@@ -112,26 +112,26 @@ namespace bit
         };
 
         // indexed
-        template <typename TAddress, unsigned Mask1, unsigned Mask2, typename TAccess1,
+        template <typename Taddress, unsigned Mask1, unsigned Mask2, typename TAccess1,
                   typename TAccess2, typename TFieldType1, typename TFieldType2,
                   template <unsigned> class TActionTemplate, unsigned Value1, unsigned Value2,
                   typename... TInputs1, typename... TInputs2, typename... Ts,
                   typename... Us> // next input and last merged are mergable
         struct MergebitActions<
             mpl::list<
-                IndexedAction<Action<FieldLocation<TAddress, Mask1, TAccess1, TFieldType1>,
+                IndexedAction<action<field_location<Taddress, Mask1, TAccess1, TFieldType1>,
                                      TActionTemplate<Value1>>,
                               TInputs1...>,
                 Ts...>,
             mpl::list<
-                IndexedAction<Action<FieldLocation<TAddress, Mask2, TAccess2, TFieldType2>,
+                IndexedAction<action<field_location<Taddress, Mask2, TAccess2, TFieldType2>,
                                      TActionTemplate<Value2>>,
                               TInputs2...>,
                 Us...>>
             : MergebitActions<
                   mpl::list<Ts...>,
                   mpl::list<
-                      IndexedAction<Action<FieldLocation<TAddress,
+                      IndexedAction<action<field_location<Taddress,
                                                          (Mask1 | Mask2), // merge
                                                          TAccess1>, // dont care, plausibility check
                                                                     // has already been done
@@ -145,20 +145,20 @@ namespace bit
         };
 
         // non indexed
-        template <typename TAddress, unsigned Mask1, unsigned Mask2, typename TAccess1,
+        template <typename Taddress, unsigned Mask1, unsigned Mask2, typename TAccess1,
                   typename TAccess2, typename TFieldType1, typename TFieldType2,
                   template <unsigned> class TActionTemplate, unsigned Value1, unsigned Value2,
                   typename... Ts, typename... Us> // next input and last merged are mergable
         struct MergebitActions<
-            mpl::list<Action<FieldLocation<TAddress, Mask1, TAccess1, TFieldType1>,
+            mpl::list<action<field_location<Taddress, Mask1, TAccess1, TFieldType1>,
                                  TActionTemplate<Value1>>,
                           Ts...>,
-            mpl::list<Action<FieldLocation<TAddress, Mask2, TAccess2, TFieldType2>,
+            mpl::list<action<field_location<Taddress, Mask2, TAccess2, TFieldType2>,
                                  TActionTemplate<Value2>>,
                           Us...>>
             : MergebitActions<
                   mpl::list<Ts...>,
-                  mpl::list<Action<FieldLocation<TAddress,
+                  mpl::list<action<field_location<Taddress,
                                                      (Mask1 | Mask2), // merge
                                                      TAccess1>, // dont care, plausibility check has
                                                                 // already been done
@@ -200,46 +200,46 @@ namespace bit
         using MergeActionStepsT = typename MergeActionSteps<T>::type;
 
         template <typename TAction, typename... TInputs>
-        struct GetAddress<IndexedAction<TAction, TInputs...>> : GetAddress<TAction>
+        struct get_address<IndexedAction<TAction, TInputs...>> : get_address<TAction>
         {
         };
 
         template <bool TopLevel, typename TAction, typename Index>
         struct MakeIndexedActionImpl;
         // in default case there is no actual expected input
-        template <bool TopLevel, typename TAddress, unsigned Mask, typename TAccess, typename TR,
+        template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
                   typename TAction, int Index>
         struct MakeIndexedActionImpl<
-            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, TAction>, int_<Index>>
+            TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, TAction>, int_<Index>>
         {
-            using type = IndexedAction<Action<FieldLocation<TAddress, Mask, TAccess, TR>, TAction>>;
+            using type = IndexedAction<action<field_location<Taddress, Mask, TAccess, TR>, TAction>>;
         };
 
         // special case where there actually is expected input
-        template <bool TopLevel, typename TAddress, unsigned Mask, typename TAccess, typename TR,
+        template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
                   int Index>
         struct MakeIndexedActionImpl<
-            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, WriteAction>, int_<Index>>
+            TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, write_action>, int_<Index>>
         {
             static_assert(
                 TopLevel,
                 "runtime values can only be executed in an apply, they cannot be stored in a list");
             using type =
-                IndexedAction<Action<FieldLocation<TAddress, Mask, TAccess, TR>, WriteAction>,
+                IndexedAction<action<field_location<Taddress, Mask, TAccess, TR>, write_action>,
                               mpl::uint_<Index>>;
         };
 
         // special case where there actually is expected input
-        template <bool TopLevel, typename TAddress, unsigned Mask, typename TAccess, typename TR,
+        template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
                   int Index>
         struct MakeIndexedActionImpl<
-            TopLevel, Action<FieldLocation<TAddress, Mask, TAccess, TR>, XorAction>, mpl::int_<Index>>
+            TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, xor_action>, mpl::int_<Index>>
         {
             static_assert(
                 TopLevel,
                 "runtime values can only be executed in an apply, they cannot be stored in a list");
             using type =
-                IndexedAction<Action<FieldLocation<TAddress, Mask, TAccess, TR>, WriteAction>,
+                IndexedAction<action<field_location<Taddress, Mask, TAccess, TR>, write_action>,
                               mpl::uint_<Index>>;
         };
 
@@ -251,25 +251,25 @@ namespace bit
         };
         // special case where a sequence point is passed
         template <bool TopLevel, typename Index>
-        struct MakeIndexedActionImpl<TopLevel, SequencePoint, Index>
+        struct MakeIndexedActionImpl<TopLevel, sequence_point_t, Index>
         {
-            using type = SequencePoint;
+            using type = sequence_point_t;
         };
 
         template <typename TAction, typename Index>
         using MakeIndexedAction = typename MakeIndexedActionImpl<true, TAction, Index>::type;
 
         template <unsigned I>
-        struct IsAddressPred
+        struct IsaddressPred
         {
             template <typename T>
             struct apply : mpl::bool_<false>
             {
             };
-            template <typename TAddress, unsigned Mask, typename TAccess, typename TFieldType,
+            template <typename Taddress, unsigned Mask, typename TAccess, typename TFieldType,
                       typename Cmd>
-            struct apply<Action<FieldLocation<TAddress, Mask, TAccess, TFieldType>, Cmd>>
-                : mpl::integral_constant<bool, (I == GetAddress<TAddress>::value)>
+            struct apply<action<field_location<Taddress, Mask, TAccess, TFieldType>, Cmd>>
+                : mpl::integral_constant<bool, (I == get_address<Taddress>::value)>
             {
             };
         };
@@ -280,9 +280,9 @@ namespace bit
         };
 
         template <typename T>
-        struct GetAddresses;
-        template <typename TAddresses, typename TLocations>
-        struct GetAddresses<FieldTuple<TAddresses, TLocations>> : TAddresses
+        struct get_addresses;
+        template <typename Taddresses, typename TLocations>
+        struct get_addresses<field_tuple<Taddresses, TLocations>> : Taddresses
         {
         };
 
@@ -337,18 +337,18 @@ namespace bit
 
         template <typename TActionList, typename TInputIndexList, typename TRetType>
         struct Apply;
-        template <typename... TActions, typename... TInputIndexes, typename... TRetAddresses,
+        template <typename... TActions, typename... TInputIndexes, typename... TRetaddresses,
                   typename TRetLocations>
         struct Apply<mpl::list<TActions...>, mpl::list<TInputIndexes...>,
-                     FieldTuple<mpl::list<TRetAddresses...>, TRetLocations>>
+                     field_tuple<mpl::list<TRetaddresses...>, TRetLocations>>
         {
-            using ReturnType = FieldTuple<mpl::list<TRetAddresses...>, TRetLocations>;
+            using ReturnType = field_tuple<mpl::list<TRetaddresses...>, TRetLocations>;
             template <unsigned A>
 
-                typename std::enable_if<mpl::any<mpl::list<TRetAddresses...>, mpl::bind1<std::is_same, mpl::uint_<A>>::template f>::value>
+                typename std::enable_if<mpl::c::ucall<mpl::c::any<mpl::c::same_as<mpl::uint_<A>>>, TRetaddresses...>::value>
                 filterReturns(ReturnType & ret, unsigned in)
             {
-					ret.value_[mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, mpl::uint_<A>>, mpl::c::offset<mpl::uint_<sizeof...(TRetAddresses)>>>, mpl::list<TRetAddresses...>>::value] |= in;
+					ret.value_[mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, mpl::uint_<A>>, mpl::c::offset<mpl::uint_<sizeof...(TRetaddresses)>>>, mpl::list<TRetaddresses...>>::value] |= in;
             }
             template <unsigned A>
             void filterReturns(...)
@@ -359,8 +359,8 @@ namespace bit
             ReturnType operator()(T... args)
             {
                 ReturnType ret{{}}; // default constructed return
-                const unsigned a[]{0U, (filterReturns<detail::GetAddress<TActions>::value>(
-                                            ret, ExecuteSeam<TActions, ::kvasir::Tag::User>{}(
+                const unsigned a[]{0U, (filterReturns<detail::get_address<TActions>::value>(
+                                            ret, execute_seam<TActions, ::kvasir::Tag::User>{}(
                                                      Finder<TInputIndexes>{}(args...))),
                                         0U)...};
                 ignore(a);
@@ -378,7 +378,7 @@ namespace bit
             template <typename... T>
             void operator()(T... args)
             {
-                const unsigned a[]{0U, (ExecuteSeam<TActions, ::kvasir::Tag::User>{}(
+                const unsigned a[]{0U, (execute_seam<TActions, ::kvasir::Tag::User>{}(
                                             Finder<TInputIndexes>{}(args...)),
                                         0U)...};
                 ignore(a);
@@ -389,13 +389,13 @@ namespace bit
         template <typename... TActions>
         void noReadNoRuntimeWriteApply(mpl::list<TActions...> *)
         {
-            const unsigned a[]{0U, ExecuteSeam<TActions, ::kvasir::Tag::User>{}(0U)...};
+            const unsigned a[]{0U, execute_seam<TActions, ::kvasir::Tag::User>{}(0U)...};
             ignore(a);
         }
 
     }
 
-    // if apply contains reads return a FieldTuple
+    // if apply contains reads return a field_tuple
     template <typename... Args>
     inline typename std::enable_if<(detail::num_reads<Args...>::value > 0),
                                 detail::return_type_of_apply<Args...>>::type 
@@ -457,9 +457,9 @@ namespace bit
     inline void apply(mpl::list<>) {}
 
     template <typename TField, typename TField::DataType Value>
-    inline bool fieldEquals(FieldValue<TField, Value>)
+    inline bool fieldEquals(field_value<TField, Value>)
     {
-        return apply(Action<TField, ReadAction>{}) == Value;
+        return apply(Action<TField, read_action>{}) == Value;
     }
 }
 }

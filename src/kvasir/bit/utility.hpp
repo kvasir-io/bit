@@ -20,21 +20,21 @@
 
 namespace kvasir{
 namespace bit{
-	constexpr unsigned maskFromRange(int high, int low){
+	constexpr unsigned mask_from_range(int high, int low){
 		return (0xFFFFFFFFULL >> (31-(high-low)))<<low;
 	}
 	template<typename... Is>
-	constexpr unsigned maskFromRange(int high, int low, Is...args){
-		return maskFromRange(high,low) | maskFromRange(args...);
+	constexpr unsigned mask_from_range(int high, int low, Is...args){
+		return mask_from_range(high,low) | mask_from_range(args...);
 	}
 	namespace detail{
 		using namespace mpl;
 
-		constexpr int maskStartsAt(unsigned mask, int bitNum = 0) {
-			return mask & 1 ? bitNum : maskStartsAt(mask >> 1, bitNum + 1);
+		constexpr int mask_starts_at(unsigned mask, int bitNum = 0) {
+			return mask & 1 ? bitNum : mask_starts_at(mask >> 1, bitNum + 1);
 		}
 
-		constexpr bool onlyOneBitSet(unsigned i){
+		constexpr bool only_one_bit_set(unsigned i){
 			return 	(i==(1u<<0)) ||
 					(i==(1u<<1)) ||
 					(i==(1u<<2)) ||
@@ -69,72 +69,72 @@ namespace bit{
 					(i==(1u<<31));
 		}
 
-		constexpr unsigned orAllOf(){
+		constexpr unsigned or_all_of(){
 			return 0;
 		}
-		constexpr unsigned orAllOf(unsigned l){
+		constexpr unsigned or_all_of(unsigned l){
 			return l;
 		}
 
 		template<typename... Ts>
-		constexpr unsigned orAllOf(unsigned l, unsigned r, Ts... args){
-			return l | r | orAllOf(args...);
+		constexpr unsigned or_all_of(unsigned l, unsigned r, Ts... args){
+			return l | r | or_all_of(args...);
 		}
 
 
 		template<typename T>
-		struct ValueToUnsigned;
+		struct value_to_unsigned;
 		template<typename T, T I>
-		struct ValueToUnsigned<mpl::integral_constant<T,I>> : mpl::uint_<unsigned(I)>{};
+		struct value_to_unsigned<mpl::integral_constant<T,I>> : mpl::uint_<unsigned(I)>{};
 
 
 		template<typename T>
-		struct GetFieldType;
-		template<typename TAddress, unsigned Mask, typename TAccess, typename TFieldType, typename TAction>
-		struct GetFieldType<Action<FieldLocation<TAddress,Mask,TAccess,TFieldType>,TAction>> {
+		struct get_field_type;
+		template<typename Taddress, unsigned Mask, typename TAccess, typename TFieldType, typename TAction>
+		struct get_field_type<action<field_location<Taddress,Mask,TAccess,TFieldType>,TAction>> {
 			using Type = TFieldType;
 		};
-		template<typename TAddress, unsigned Mask, typename TAccess, typename TFieldType>
-		struct GetFieldType<FieldLocation<TAddress,Mask,TAccess,TFieldType>>{
+		template<typename Taddress, unsigned Mask, typename TAccess, typename TFieldType>
+		struct get_field_type<field_location<Taddress,Mask,TAccess,TFieldType>>{
 			using Type = TFieldType;
 		};
 		template<typename T>
-		using GetFieldTypeT = typename GetFieldType<T>::Type;
+		using get_field_type_t = typename get_field_type<T>::Type;
 
 
 		template<typename T>
-		struct IsWriteLiteral : std::false_type{};
+		struct is_write_literal : std::false_type{};
 
 		template<typename T>
-		struct IsWriteRuntime : std::false_type{};
+		struct is_write_runtime : std::false_type{};
 
 		template<typename T>
-		struct IsFieldLocation : std::false_type{};
-		template<typename TAddress, unsigned Mask, typename Access, typename TFieldType>
-		struct IsFieldLocation<FieldLocation<TAddress, Mask, Access, TFieldType>> : std::true_type {};
+		struct is_field_location : std::false_type{};
+		template<typename Taddress, unsigned Mask, typename Access, typename TFieldType>
+		struct is_field_location<field_location<Taddress, Mask, Access, TFieldType>> : std::true_type {};
 
 		template<typename T>
-		struct IsWritable : std::false_type{};
-		template<typename TAddress, unsigned Mask, ReadActionType RAction, ModifiedWriteValueType WAction, typename TFieldType>
-		struct IsWritable<FieldLocation<TAddress, Mask, Access<AccessType::readWrite, RAction, WAction>, TFieldType>> : std::true_type {};
-		template<typename TAddress, unsigned Mask, ReadActionType RAction, ModifiedWriteValueType WAction, typename TFieldType>
-		struct IsWritable<FieldLocation<TAddress, Mask, Access<AccessType::writeOnly, RAction, WAction>, TFieldType>> : std::true_type {};
+		struct is_writable : std::false_type{};
+		template<typename Taddress, unsigned Mask, read_action_type RAction, modified_write_value_type WAction, typename TFieldType>
+		struct is_writable<field_location<Taddress, Mask, access<access_type::readWrite, RAction, WAction>, TFieldType>> : std::true_type {};
+		template<typename Taddress, unsigned Mask, read_action_type RAction, modified_write_value_type WAction, typename TFieldType>
+		struct is_writable<field_location<Taddress, Mask, access<access_type::writeOnly, RAction, WAction>, TFieldType>> : std::true_type {};
 
 		template<typename T>
-		struct IsSetToClear : std::false_type{};
-		template<typename TAddress, unsigned Mask, AccessType AT, ReadActionType RAction, typename TFieldType>
-		struct IsSetToClear<FieldLocation<TAddress, Mask, Access<AT, RAction, ModifiedWriteValueType::oneToClear>, TFieldType>> : std::true_type {};
+		struct is_set_to_clear : std::false_type{};
+		template<typename Taddress, unsigned Mask, access_type AT, read_action_type RAction, typename TFieldType>
+		struct is_set_to_clear<field_location<Taddress, Mask, access<AT, RAction, modified_write_value_type::oneToClear>, TFieldType>> : std::true_type {};
 
 		template<typename T, typename U>
-		struct WriteLocationAndCompileTimeValueTypeAreSame : std::false_type {};
+		struct write_location_and_compile_time_value_types_are_same : mpl::bool_<true> {};
 		template<typename AT, unsigned M, typename A, typename FT, FT V>
-		struct WriteLocationAndCompileTimeValueTypeAreSame<FieldLocation<AT, M, A, FT>,mpl::integral_constant<FT,V>> : std::true_type{};
+		struct write_location_and_compile_time_value_types_are_same<field_location<AT, M, A, FT>,mpl::integral_constant<FT,V>> : mpl::bool_<true>{};
 
 		//getters for specific parameters of an Action
 		template<typename T>
-			struct GetAddress;
+			struct get_address;
 		template<unsigned A, unsigned WIIZ, unsigned SOTC, typename TRegType, typename TMode>
-			struct GetAddress<Address<A, WIIZ, SOTC, TRegType, TMode>> {
+			struct get_address<address<A, WIIZ, SOTC, TRegType, TMode>> {
 				static constexpr unsigned value = A;
 				static unsigned read() {
 					volatile TRegType& reg = *reinterpret_cast<volatile TRegType*>(value);
@@ -146,10 +146,10 @@ namespace bit{
 				}
 				using type = mpl::uint_<A>;
 			};
-		template<typename TAddress, unsigned Mask, typename TAccess, typename TFiledType>
-		struct GetAddress<FieldLocation<TAddress, Mask, TAccess, TFiledType>> : GetAddress<TAddress> {};
+		template<typename Taddress, unsigned Mask, typename TAccess, typename TFiledType>
+		struct get_address<field_location<Taddress, Mask, TAccess, TFiledType>> : get_address<Taddress> {};
 		template<typename TReadLoc, typename TWriteLoc>
-		struct GetAddress<FieldLocationPair<TReadLoc,TWriteLoc>> {
+		struct get_address<field_location_pair<TReadLoc,TWriteLoc>> {
 			static constexpr unsigned value = TReadLoc::value;
 			static unsigned read(){
 				volatile unsigned& reg = *reinterpret_cast<volatile unsigned*>(value);
@@ -161,46 +161,45 @@ namespace bit{
 			}
 			using type = mpl::uint_<value>;
 		};
-		template<typename TFieldLocation, typename TAction>
-		struct GetAddress<Action<TFieldLocation,TAction>> : GetAddress<TFieldLocation> {};
+		template<typename Tfield_location, typename TAction>
+		struct get_address<action<Tfield_location,TAction>> : get_address<Tfield_location> {};
 
 		template<typename T>
-		struct GetFieldLocation;
+		struct get_field_location;
 		template<typename TLocation, typename TAction>
-		struct GetFieldLocation<Action<TLocation,TAction>>{
+		struct get_field_location<action<TLocation,TAction>>{
 			using type = TLocation;
 		};
 
 		//predecate retuning result of left < right for bitOptions
 		template<typename TLeft, typename TRight>
-		struct bitActionLess;
+		struct bit_action_less;
 		template<typename T1, typename U1, typename T2, typename U2>
-		struct bitActionLess< Action<T1,U1>, Action<T2,U2> > {
-			using type = mpl::bool_<(GetAddress<T1>::value < GetAddress<T2>::value)>;
+		struct bit_action_less< action<T1,U1>, action<T2,U2> > {
+			using type = mpl::bool_<(get_address<T1>::value < get_address<T2>::value)>;
 		};
-		using bitActionLessP = mpl::bind_t<bitActionLess>;
 
 		//predicate returns true if action is a read
 		template<typename T>
-		struct IsReadPred : mpl::bool_<false> {};
+		struct is_read : mpl::bool_<false> {};
 		template<typename A>
-		struct IsReadPred< Action<A,ReadAction> > : mpl::bool_<true>{};
+		struct is_read< action<A,read_action> > : mpl::bool_<true>{};
 		
 		//predicate returns true if action is a read
 		template<typename T>
-		struct IsRuntimeWritePred : mpl::bool_<false> {};
+		struct is_runtime_write : mpl::bool_<false> {};
 		template<typename A>
-		struct IsRuntimeWritePred< Action<A, WriteAction> > : mpl::bool_<true> {};
+		struct is_runtime_write< action<A, write_action> > : mpl::bool_<true> {};
 
 
 		template<typename T>
-		struct GetMask;
-		//from FieldLocations
-		template<typename Address, unsigned Mask, typename TAccess, typename ResultType>
-		struct GetMask<FieldLocation<Address,Mask,TAccess,ResultType>> : integral_constant<unsigned,Mask>{};
+		struct get_mask;
+		//from field_locations
+		template<typename address, unsigned Mask, typename TAccess, typename ResultType>
+		struct get_mask<field_location<address,Mask,TAccess,ResultType>> : integral_constant<unsigned,Mask>{};
 		//from Action
-		template<typename TFieldLocation, typename TAction>
-		struct GetMask<Action<TFieldLocation,TAction>> : GetMask<TFieldLocation>{};
+		template<typename Tfield_location, typename TAction>
+		struct get_mask<action<Tfield_location,TAction>> : get_mask<Tfield_location>{};
 
 	}
 }

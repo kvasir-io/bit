@@ -27,23 +27,23 @@ namespace kvasir {
 		namespace detail {
 			using namespace mpl;
 
-			//continuation takes an args list or tree, flattens it and removes all actions which are not reads and transforms to FieldLocations
+			//continuation takes an args list or tree, flattens it and removes all actions which are not reads and transforms to field_locations
 			template<typename C = c::listify>
-			using reads = c::flatten<lambda<list>, c::filter<lambda<IsReadPred>, C>>;
+			using reads = c::flatten<c::cfe<list>, c::filter<c::cfe<is_read>, C>>;
 
-			using unique_addresses = reads<c::transform<lambda<GetAddress>, c::sort<less_than, c::remove_adjacent<bind_t<std::is_same>>>>>;
+			using unique_addresses = reads<c::transform<c::cfe<get_address>, c::sort<less_than, c::remove_adjacent<c::cfl<std::is_same>>>>>;
 
 			template <typename... Ts>
-			using return_type_of_apply = FieldTuple<c::ucall<unique_addresses, Ts...>,
-				c::ucall<reads<c::transform<lambda<GetFieldLocation>>>,Ts...>>;
+			using return_type_of_apply = field_tuple<c::ucall<unique_addresses, Ts...>,
+				c::ucall<reads<c::transform<c::cfl<get_field_location>>>,Ts...>>;
 
 
 			//tests for diferent kinds of inputs to apply, used for SFINAE selecting the right overload
 			template<typename...Ts>
-			using num_runtime_writes = c::ucall<c::filter<lambda<IsRuntimeWritePred>, c::size >, Ts... >; //no need to flatten because runtime writes only allowed toplevel
+			using num_runtime_writes = c::ucall<c::filter<c::cfe<is_runtime_write>, c::size<> >, Ts... >; //no need to flatten because runtime writes only allowed toplevel
 
 			template<typename...Ts>
-			using num_reads = c::ucall<reads<c::size>, Ts... >;
+			using num_reads = c::ucall<reads<c::size<>>, Ts... >;
 
 			template<typename...Ts>
 			using all_compile_time = bool_<(num_reads<Ts...>::value == 0 && num_runtime_writes<Ts...>::value == 0)>;
@@ -53,20 +53,16 @@ namespace kvasir {
 
 			//sanity check
 			template <typename T>
-			struct ArgToApplyIsPlausible : bool_<false>
+			struct arg_to_apply_is_plausible : bool_<false>
 			{
 			};
 			template <typename L, typename A>
-			struct ArgToApplyIsPlausible<Action<L, A>> : bool_<true>
-			{
-			};
+			struct arg_to_apply_is_plausible<action<L, A>> : bool_<true>{};
 			template <>
-			struct ArgToApplyIsPlausible<SequencePoint> : bool_<true>
-			{
-			};
+			struct arg_to_apply_is_plausible<sequence_point_t> : bool_<true>{};
 
 			template <typename... Ts>
-			using args_to_apply_are_plausible = c::ucall<c::flatten<c::all<lambda<ArgToApplyIsPlausible>>>,Ts...>;
+			using args_to_apply_are_plausible = c::ucall<c::flatten<c::all<c::cfe<arg_to_apply_is_plausible>>>,Ts...>;
 		}
 	}
 }

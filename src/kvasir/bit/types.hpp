@@ -24,67 +24,53 @@
 namespace kvasir{
 namespace bit{
 
-	struct SequencePoint{
-		using Type = SequencePoint;
-	};
-	constexpr SequencePoint sequencePoint{};
+	struct sequence_point_t{};
+	constexpr sequence_point_t sequence_point{};
 
-	template<int I>
-	struct IsolatedByte{
-		static constexpr int value = I;
-		using Type = IsolatedByte<I>;
-	};
-	namespace Isolated{
-		constexpr IsolatedByte<0> byte0{};
-		constexpr IsolatedByte<1> byte1{};
-		constexpr IsolatedByte<2> byte2{};
-		constexpr IsolatedByte<3> byte3{};
-	}
+	struct pushable_mode{};
+	struct normal_mode{};
+	struct special_read_mode{};
 
-	struct PushableMode{};
-	struct NormalMode{};
-	struct SpecialReadMode{};
-
-	template<unsigned A, unsigned WriteIgnoredIfZeroMask=0, unsigned WriteIgnoredIfOneMask = 0, typename TRegType = unsigned, typename TMode = NormalMode>
-	struct Address{};
+	template<unsigned A, unsigned WriteIgnoredIfZeroMask=0, unsigned WriteIgnoredIfOneMask = 0, typename TRegType = unsigned, typename TMode = normal_mode>
+	struct address{};
 
 	//write a compile time known value
 	template<unsigned I>
-	struct WriteLiteralAction{};
+	struct write_literal_action{};
 
 	//write a run time known value
-	struct WriteAction{};
+	struct write_action{};
 
 	//read
-	struct ReadAction{};
+	struct read_action{};
 
 	//xor a compile time known mask
 	template<unsigned I>
-	struct XorLiteralAction{};
+	struct xor_literal_action{};
 
 	//xor a run time known value
-	struct XorAction{};
+	struct xor_action{};
 
 
 	template<typename TLocation, typename TAction>
-	struct Action {
+	struct action {
 		template<typename... Ts>
-		constexpr Action(Ts...args) :TAction{ args... } {}
+		constexpr action(Ts...args) :TAction{ args... } {}
 	};
 	template<typename TLocation>
-	struct Action<TLocation, WriteAction> {
+	struct action<TLocation, write_action> {
 		template<typename... Ts>
-		constexpr Action(const unsigned in) :value_{ in } {}
+		constexpr action(const unsigned in) :value_{ in } {}
 		unsigned value_;
 	};
 	template<typename TLocation>
-	struct Action<TLocation, XorAction> {
+	struct action<TLocation, xor_action> {
 		template<typename... Ts>
-		constexpr Action(const unsigned in) :value_{ in } {}
+		constexpr action(const unsigned in) :value_{ in } {}
 		unsigned value_;
 	};
 
-	enum class ModifiedWriteValueType {
+	enum class modified_write_value_type {
 		normal,
 		oneToClear,
 		oneToSet,
@@ -97,7 +83,7 @@ namespace bit{
 		modify
 	};
 
-	enum class ReadActionType {
+	enum class read_action_type {
 		normal,
 		clear,
 		set,
@@ -105,7 +91,7 @@ namespace bit{
 		modifyExternal
 	};
 
-	enum class AccessType {
+	enum class access_type {
 		readOnly,
 		writeOnly,
 		readWrite,
@@ -113,70 +99,70 @@ namespace bit{
 		readWriteOnce
 	};
 
-	template<AccessType, ReadActionType = ReadActionType::normal, ModifiedWriteValueType = ModifiedWriteValueType::normal>
-	struct Access {};
+	template<access_type, read_action_type = read_action_type::normal, modified_write_value_type = modified_write_value_type::normal>
+	struct access {};
 
-	using ReadWriteAccess = Access<AccessType::readWrite>;
-	using ReadOnlyAccess = Access<AccessType::readOnly>;
-	using WriteOnlyAccess = Access<AccessType::writeOnly>;
-	using ROneToClearAccess = Access<AccessType::readWrite, ReadActionType::normal, ModifiedWriteValueType::oneToClear>;
+	using read_write_access = access<access_type::readWrite>;
+	using read_only_access = access<access_type::readOnly>;
+	using write_only_access = access<access_type::writeOnly>;
+	using one_to_clear_access = access<access_type::readWrite, read_action_type::normal, modified_write_value_type::oneToClear>;
 
-	template<typename TAddress, unsigned Mask, typename Access = ReadWriteAccess, typename TFieldType = unsigned>
-	struct FieldLocation{};
+	template<typename Taddress, unsigned Mask, typename Access = read_write_access, typename TFieldType = unsigned>
+	struct field_location{};
 
 	namespace detail {
 		template<typename T>
 		struct get_field_data_type;
-		template<typename TAddress, unsigned Mask, typename Access, typename TFieldType>
-		struct get_field_data_type<FieldLocation<TAddress, Mask, Access, TFieldType>> {
+		template<typename Taddress, unsigned Mask, typename Access, typename TFieldType>
+		struct get_field_data_type<field_location<Taddress, Mask, Access, TFieldType>> {
 			using type = TFieldType;
 		};
 	}
 
 	template<typename T, typename U>
-	struct FieldLocationPair{};
+	struct field_location_pair{};
 
 	namespace detail{
-		constexpr int positionOfFirstSetBit(unsigned in, int pos=0){
-			return (in & 0x01)?pos:positionOfFirstSetBit(in >> 1, pos + 1);
+		constexpr int position_of_first_set_bit(unsigned in, int pos=0){
+			return (in & 0x01)?pos:position_of_first_set_bit(in >> 1, pos + 1);
 		}
 	}
 	
-	template<typename TFieldLocation, typename detail::get_field_data_type<TFieldLocation>::type Value>
-	struct FieldValue{
-		operator typename detail::get_field_data_type<TFieldLocation>::type() const {
+	template<typename Tfield_location, typename detail::get_field_data_type<Tfield_location>::type Value>
+	struct field_value{
+		operator typename detail::get_field_data_type<Tfield_location>::type() const {
 			return Value;
 		}
 	};
-	template<typename TAddresses, typename TFieldLocation>
-	struct FieldTuple;		//see below for implementation in specialization
+	template<typename Taddresses, typename Tfield_location>
+	struct field_tuple;		//see below for implementation in specialization
 
 	namespace detail {
-		template<typename Object, typename TFieldLocation>
-		struct GetFieldLocationIndex;
-		template<typename TA, typename TLocations, typename TFieldLocation>
-		struct GetFieldLocationIndex<FieldTuple<TA, TLocations>, TFieldLocation> : mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, TFieldLocation>,mpl::c::front>, TLocations> {};
+		template<typename Object, typename Tfield_location>
+		struct get_field_location_index;
+		template<typename TA, typename TLocations, typename Tfield_location>
+		struct get_field_location_index<field_tuple<TA, TLocations>, Tfield_location> : mpl::c::call<mpl::c::find_if<mpl::c::is_same<Tfield_location>,mpl::c::front>, TLocations> {};
 
-		template<typename Object, typename TFieldLocation>
-		using GetFieldLocationIndexT = typename GetFieldLocationIndex<Object, TFieldLocation>::Type;
+		template<typename Object, typename Tfield_location>
+		using get_field_location_index_t = typename get_field_location_index<Object, Tfield_location>::Type;
 	}
 
 	template<uint32_t... Is, typename... TAs, unsigned... Masks, typename... TAccesss, typename... TRs>
-	struct FieldTuple<mpl::list<mpl::uint_<Is>...>,mpl::list<FieldLocation<TAs,Masks,TAccesss,TRs>...>>{
+	struct field_tuple<mpl::list<mpl::uint_<Is>...>,mpl::list<field_location<TAs,Masks,TAccesss,TRs>...>>{
 		unsigned value_[sizeof...(Is)];
 		template<std::size_t Index>
 		mpl::at<mpl::list<TRs...>, Index> get() const{
 			using namespace mpl;
-			using Address = mpl::uint_<mpl::at<mpl::list<TAs...>, Index>::value>;
-			constexpr unsigned index = sizeof...(Is) - mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, Address>,mpl::c::size>, mpl::list<mpl::uint_<Is>...>>::value;
+			using address = mpl::uint_<mpl::at<mpl::list<TAs...>, Index>::value>;
+			constexpr unsigned index = sizeof...(Is) - mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, address>,mpl::c::size>, mpl::list<mpl::uint_<Is>...>>::value;
 			using ResultType = mpl::at<mpl::list<TRs...>, index>;
 			constexpr unsigned mask = mpl::at<mpl::list<mpl::uint_<Masks>...>, index>::value;
-			unsigned r = (value_[index] & mask) >> detail::positionOfFirstSetBit(mask);
+			unsigned r = (value_[index] & mask) >> detail::position_of_first_set_bit(mask);
 			return ResultType(r);
 		}
 		template<typename T>
-		auto operator[](T)->decltype(get<detail::GetFieldLocationIndex<FieldTuple, T>::value>()) {
-			return get<detail::GetFieldLocationIndex<FieldTuple, T>::value>();
+		auto operator[](T)->decltype(get<detail::get_field_location_index<field_tuple, T>::value>()) {
+			return get<detail::get_field_location_index<field_tuple, T>::value>();
 		}
 		template<typename... T>
 		static constexpr unsigned getFirst(unsigned i, T...) {
@@ -190,23 +176,23 @@ namespace bit{
 		using ConvertableTo = typename std::conditional < (sizeof...(TRs) == 1), mpl::at<mpl::list<TRs...>,0>, DoNotUse>::type;
 		operator ConvertableTo() {
 			constexpr unsigned mask = getFirst(Masks...);
-			return ConvertableTo((value_[0] & mask) >> detail::positionOfFirstSetBit(mask));
+			return ConvertableTo((value_[0] & mask) >> detail::position_of_first_set_bit(mask));
 		};
 	};
 	template<>
-	struct FieldTuple<mpl::list<>,mpl::list<>>{};
+	struct field_tuple<mpl::list<>,mpl::list<>>{};
 
-	template<std::size_t I, typename TFieldTuple>
-	auto get(TFieldTuple o)->decltype(o.template get<I>()) {
+	template<std::size_t I, typename Tfield_tuple>
+	auto get(Tfield_tuple o)->decltype(o.template get<I>()) {
 		return o.template get<I>();
 	}
-	template<typename T, typename TFieldTuple>
-	auto get(T, TFieldTuple o)->decltype(o.template get<detail::GetFieldLocationIndex<TFieldTuple,T>::value>()) {
-		return o.template get<detail::GetFieldLocationIndex<TFieldTuple, T>::value>();
+	template<typename T, typename Tfield_tuple>
+	auto get(T, Tfield_tuple o)->decltype(o.template get<detail::get_field_location_index<Tfield_tuple,T>::value>()) {
+		return o.template get<detail::get_field_location_index<Tfield_tuple, T>::value>();
 	}
 
-	template<typename TFieldTuple, typename TLocation, typename TLocation::DataType Value>
-	bool operator==(const TFieldTuple& f, const FieldValue<TLocation, Value>) {
+	template<typename Tfield_tuple, typename TLocation, typename TLocation::DataType Value>
+	bool operator==(const Tfield_tuple& f, const field_value<TLocation, Value>) {
 		return get(TLocation{},f) == Value;
 	}
 }

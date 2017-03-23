@@ -17,76 +17,76 @@ namespace Tag {
 	struct None {};
 	namespace Adc {
 		template<int I>
-		struct Channel{ static constexpr int value = I; };
-		static constexpr Channel<0> channel0{};
-		static constexpr Channel<1> channel1{};
-		static constexpr Channel<2> channel2{};
-		static constexpr Channel<3> channel3{};
-		static constexpr Channel<4> channel4{};
-		static constexpr Channel<5> channel5{};
-		static constexpr Channel<6> channel6{};
-		static constexpr Channel<7> channel7{};
-		static constexpr Channel<8> channel8{};
-		static constexpr Channel<9> channel9{};
-		static constexpr Channel<10> channel10{};
-		static constexpr Channel<11> channel11{};
-		static constexpr Channel<12> channel12{};
-		static constexpr Channel<13> channel13{};
-		static constexpr Channel<14> channel14{};
-		static constexpr Channel<15> channel15{};
+		struct channel{ static constexpr int value = I; };
+		static constexpr channel<0> channel0{};
+		static constexpr channel<1> channel1{};
+		static constexpr channel<2> channel2{};
+		static constexpr channel<3> channel3{};
+		static constexpr channel<4> channel4{};
+		static constexpr channel<5> channel5{};
+		static constexpr channel<6> channel6{};
+		static constexpr channel<7> channel7{};
+		static constexpr channel<8> channel8{};
+		static constexpr channel<9> channel9{};
+		static constexpr channel<10> channel10{};
+		static constexpr channel<11> channel11{};
+		static constexpr channel<12> channel12{};
+		static constexpr channel<13> channel13{};
+		static constexpr channel<14> channel14{};
+		static constexpr channel<15> channel15{};
 	}
 	namespace Capture {
 		template<int I>
-		struct Channel{ static constexpr int value{I}; };
-		static constexpr Channel<0> c0{};
-		static constexpr Channel<1> c1{};
-		static constexpr Channel<2> c2{};
-		static constexpr Channel<3> c3{};
-		static constexpr Channel<4> c4{};
-		static constexpr Channel<5> c5{};
-		static constexpr Channel<6> c6{};
-		static constexpr Channel<7> c7{};
-		static constexpr Channel<8> c8{};
-		static constexpr Channel<9> c9{};
-		static constexpr Channel<10> c10{};
-		static constexpr Channel<11> c11{};
-		static constexpr Channel<12> c12{};
-		static constexpr Channel<13> c13{};
-		static constexpr Channel<14> c14{};
-		static constexpr Channel<15> c15{};
+		struct channel{ static constexpr int value{I}; };
+		static constexpr channel<0> c0{};
+		static constexpr channel<1> c1{};
+		static constexpr channel<2> c2{};
+		static constexpr channel<3> c3{};
+		static constexpr channel<4> c4{};
+		static constexpr channel<5> c5{};
+		static constexpr channel<6> c6{};
+		static constexpr channel<7> c7{};
+		static constexpr channel<8> c8{};
+		static constexpr channel<9> c9{};
+		static constexpr channel<10> c10{};
+		static constexpr channel<11> c11{};
+		static constexpr channel<12> c12{};
+		static constexpr channel<13> c13{};
+		static constexpr channel<14> c14{};
+		static constexpr channel<15> c15{};
 	}
 	namespace Match{
 		template<int I>
-		struct Channel{ static constexpr int value{I}; };
-		static constexpr Channel<0> m0{};
-		static constexpr Channel<1> m1{};
-		static constexpr Channel<2> m2{};
-		static constexpr Channel<3> m3{};
-		static constexpr Channel<4> m4{};
-		static constexpr Channel<5> m5{};
-		static constexpr Channel<6> m6{};
-		static constexpr Channel<7> m7{};
-		static constexpr Channel<8> m8{};
-		static constexpr Channel<9> m9{};
-		static constexpr Channel<10> m10{};
-		static constexpr Channel<11> m11{};
-		static constexpr Channel<12> m12{};
-		static constexpr Channel<13> m13{};
-		static constexpr Channel<14> m14{};
-		static constexpr Channel<15> m15{};
+		struct channel{ static constexpr int value{I}; };
+		static constexpr channel<0> m0{};
+		static constexpr channel<1> m1{};
+		static constexpr channel<2> m2{};
+		static constexpr channel<3> m3{};
+		static constexpr channel<4> m4{};
+		static constexpr channel<5> m5{};
+		static constexpr channel<6> m6{};
+		static constexpr channel<7> m7{};
+		static constexpr channel<8> m8{};
+		static constexpr channel<9> m9{};
+		static constexpr channel<10> m10{};
+		static constexpr channel<11> m11{};
+		static constexpr channel<12> m12{};
+		static constexpr channel<13> m13{};
+		static constexpr channel<14> m14{};
+		static constexpr channel<15> m15{};
 	}
-	namespace Detail{
+	namespace detail{
 		template<typename T>
-		struct IsChannel{
+		struct Ischannel{
 			static constexpr bool value = false;
 		};
 		template<int I>
-		struct IsChannel<Adc::Channel<I>>{
+		struct Ischannel<Adc::channel<I>>{
 			static constexpr bool value = true;
 		};
 		template<typename T>
-		constexpr int getChannelValue(){
-			static_assert(IsChannel<T>::value,"expected a Tags::Adc::Channel");
+		constexpr int getchannelValue(){
+			static_assert(Ischannel<T>::value,"expected a Tags::Adc::channel");
 			return T::value;
 		}
 	}

@@ -43,20 +43,20 @@ namespace kvasir {
 		}
 
 		//bit helpers
-		template<typename Address, int Position, typename TFieldType = bool>
-		using RWBitLocT = FieldLocation<Address,(1<<Position),ReadWriteAccess,TFieldType>;
-		template<typename Address, int Position, typename TFieldType = bool>
-		using ROBitLocT = FieldLocation<Address,(1<<Position),ReadOnlyAccess,TFieldType>;
-		template<typename Address, int Position, typename TFieldType = bool>
-		using WOBitLocT = FieldLocation<Address,(1<<Position),WriteOnlyAccess,TFieldType>;
+		template<typename address, int Position, typename TFieldType = bool>
+		using rw_bit_loc_t = field_location<address,(1<<Position),read_write_access,TFieldType>;
+		template<typename address, int Position, typename TFieldType = bool>
+		using ro_bit_loc_t = field_location<address,(1<<Position),read_only_access,TFieldType>;
+		template<typename address, int Position, typename TFieldType = bool>
+		using wo_bit_loc_t = field_location<address,(1<<Position),write_only_access,TFieldType>;
 
 		//bit field helpers
-		template<typename Address, int HighestBit, int LowestBit, typename TFieldType = unsigned>
-		using RWFieldLocT = FieldLocation<Address,maskFromRange(HighestBit,LowestBit),ReadWriteAccess,TFieldType>;
-		template<typename Address, int HighestBit, int LowestBit, typename TFieldType = unsigned>
-		using ROFieldLocT = FieldLocation<Address,maskFromRange(HighestBit,LowestBit),ReadOnlyAccess,TFieldType>;
-		template<typename Address, int HighestBit, int LowestBit, typename TFieldType = unsigned>
-		using WOFieldLocT = FieldLocation<Address,maskFromRange(HighestBit,LowestBit),WriteOnlyAccess,TFieldType>;
+		template<typename address, int HighestBit, int LowestBit, typename TFieldType = unsigned>
+		using rw_field_loc_t = field_location<address,mask_from_range(HighestBit,LowestBit),read_write_access,TFieldType>;
+		template<typename address, int HighestBit, int LowestBit, typename TFieldType = unsigned>
+		using ro_field_loc_t = field_location<address, mask_from_range(HighestBit,LowestBit),read_only_access,TFieldType>;
+		template<typename address, int HighestBit, int LowestBit, typename TFieldType = unsigned>
+		using wo_field_loc_t = field_location<address, mask_from_range(HighestBit,LowestBit),write_only_access,TFieldType>;
 
 	}
 }

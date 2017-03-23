@@ -30,79 +30,79 @@ namespace bit
     {
 
         template <typename TbitAction>
-        struct Exec;
+        struct exec;
 
         template <typename TLocation, unsigned ClearMask, unsigned SetMask>
-        struct GenericReadMaskOrWrite
+        struct generic_read_mask_or_write
         {
             unsigned operator()(unsigned in = 0)
             {
-                auto i = GetAddress<TLocation>::read();
+                auto i = get_address<TLocation>::read();
                 i &= ~ClearMask;
                 i |= SetMask | in;
-                GetAddress<TLocation>::write(i);
+                get_address<TLocation>::write(i);
                 return i;
             }
         };
 
         template <typename TLocation, unsigned ClearMask, unsigned XorMask>
-        struct GenericReadMaskXorWrite
+        struct generic_read_mask_xor_write
         {
             unsigned operator()(unsigned in = 0)
             {
-                auto i = GetAddress<TLocation>::read();
+                auto i = get_address<TLocation>::read();
                 i &= ~ClearMask;
                 i ^= (XorMask | in);
-                GetAddress<TLocation>::write(i);
+                get_address<TLocation>::write(i);
                 return i;
             }
         };
 
         // write literal with read modify write
-        template <typename TAddress, unsigned Mask, typename Access, typename FieldType,
+        template <typename Taddress, unsigned Mask, typename Access, typename FieldType,
                   unsigned Data>
-        struct Exec<Action<FieldLocation<TAddress, Mask, Access, FieldType>,
-                                             WriteLiteralAction<Data>>>
-            : GenericReadMaskOrWrite<FieldLocation<TAddress, Mask, Access, FieldType>, Mask, Data>
+        struct exec<action<field_location<Taddress, Mask, Access, FieldType>,
+                                             write_literal_action<Data>>>
+            : generic_read_mask_or_write<field_location<Taddress, Mask, Access, FieldType>, Mask, Data>
         {
             static_assert((Data & (~Mask)) == 0, "bad mask");
         };
 
-        template <typename TAddress, unsigned Mask, typename Access, typename FieldType>
-        struct Exec<
-            Action<FieldLocation<TAddress, Mask, Access, FieldType>, WriteAction>>
-            : GenericReadMaskOrWrite<FieldLocation<TAddress, Mask, Access, FieldType>, Mask, 0>
+        template <typename Taddress, unsigned Mask, typename Access, typename FieldType>
+        struct exec<
+            action<field_location<Taddress, Mask, Access, FieldType>, write_action>>
+            : generic_read_mask_or_write<field_location<Taddress, Mask, Access, FieldType>, Mask, 0>
         {
         };
 
-        template <typename TAddress, unsigned Mask, typename Access, typename FieldType>
-        struct Exec<
-            Action<FieldLocation<TAddress, Mask, Access, FieldType>, ReadAction>>
+        template <typename Taddress, unsigned Mask, typename Access, typename FieldType>
+        struct exec<
+            action<field_location<Taddress, Mask, Access, FieldType>, read_action>>
         {
             unsigned operator()(unsigned in = 0)
             {
-                return GetAddress<TAddress>::read();
+                return get_address<Taddress>::read();
             }
         };
-        template <typename TAddress, unsigned Mask, typename Access, typename FieldType,
+        template <typename Taddress, unsigned Mask, typename Access, typename FieldType,
                   unsigned Data>
-        struct Exec<Action<FieldLocation<TAddress, Mask, Access, FieldType>,
-                                             XorLiteralAction<Data>>>
-            : GenericReadMaskOrWrite<FieldLocation<TAddress, Mask, Access, FieldType>, Mask, Data>
+        struct exec<action<field_location<Taddress, Mask, Access, FieldType>,
+                                             xor_literal_action<Data>>>
+            : generic_read_mask_or_write<field_location<Taddress, Mask, Access, FieldType>, Mask, Data>
         {
             static_assert((Data & (~Mask)) == 0, "bad mask");
             unsigned operator()(unsigned in = 0)
             {
-                auto i = GetAddress<TAddress>::read();
+                auto i = get_address<Taddress>::read();
                 i ^= Data;
-                GetAddress<TAddress>::write(i);
+                get_address<Taddress>::write(i);
                 return 0;
             }
         };
     }
 
     template <typename T, typename U>
-    struct ExecuteSeam : detail::Exec<T>
+    struct execute_seam : detail::exec<T>
     {
     };
 }
