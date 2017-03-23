@@ -62,7 +62,98 @@ namespace kvasir {
 			struct arg_to_apply_is_plausible<sequence_point_t> : bool_<true>{};
 
 			template <typename... Ts>
-			using args_to_apply_are_plausible = c::ucall<c::flatten<c::all<c::cfe<arg_to_apply_is_plausible>>>,Ts...>;
+			using args_to_apply_are_plausible = c::ucall<c::flatten<c::cfe<list>,c::all<c::cfe<arg_to_apply_is_plausible>>>,Ts...>;
+
+
+			// an index action consists of an action (possibly merged) and
+			// the inputs including masks which it needs
+			template <typename TAction, typename... TInputs>
+			struct indexed_action{};
+
+			template <bool TopLevel, typename TAction, typename Index>
+			struct make_indexed_action_impl;
+			// in default case there is no actual expected input
+			template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
+				typename TAction, int Index>
+				struct make_indexed_action_impl<
+				TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, TAction>, int_<Index>>
+			{
+				using type = indexed_action<action<field_location<Taddress, Mask, TAccess, TR>, TAction>>;
+			};
+
+			// special case where there actually is expected input
+			template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
+				int Index>
+				struct make_indexed_action_impl<
+				TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, write_action>, int_<Index>>
+			{
+				static_assert(
+					TopLevel,
+					"runtime values can only be executed in an apply, they cannot be stored in a list");
+				using type =
+					indexed_action<action<field_location<Taddress, Mask, TAccess, TR>, write_action>,
+					mpl::uint_<Index>>;
+			};
+
+			// special case where there actually is expected input
+			template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
+				int Index>
+				struct make_indexed_action_impl<
+				TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, xor_action>, mpl::int_<Index>>
+			{
+				static_assert(
+					TopLevel,
+					"runtime values can only be executed in an apply, they cannot be stored in a list");
+				using type =
+					indexed_action<action<field_location<Taddress, Mask, TAccess, TR>, write_action>,
+					mpl::uint_<Index>>;
+			};
+
+			// special case where a list of actions is passed
+			template <bool TopLevel, typename... Ts, typename Index>
+			struct make_indexed_action_impl<TopLevel, mpl::list<Ts...>, Index>
+			{
+				using type = mpl::list<typename make_indexed_action_impl<false, Ts, Index>::type...>;
+			};
+			// special case where a sequence point is passed
+			template <bool TopLevel, typename Index>
+			struct make_indexed_action_impl<TopLevel, sequence_point_t, Index>
+			{
+				using type = sequence_point_t;
+			};
+
+			template <typename TAction, typename Index>
+			using make_indexed_action = typename make_indexed_action_impl<true, TAction, Index>::type;
+
+			template <typename T>
+			struct get_action;
+			template <typename A, typename... T>
+			struct get_action<indexed_action<A, T...>>
+			{
+				using type = A;
+			};
+
+			template <typename F, typename A>
+			struct get_action<action<F, A>>
+			{
+				using type = action<F, A>;
+			};
+
+			// predicate returning result of left < right for bitOptions
+			template <typename TLeft, typename TRight>
+			struct indexed_action_less;
+			template <typename T1, typename U1, typename T2, typename U2, typename... TInputs1,
+				typename... TInputs2>
+				struct indexed_action_less<indexed_action<action<T1, U1>, TInputs1...>,
+				indexed_action<action<T2, U2>, TInputs2...>>
+				: mpl::bool_<(get_address<T1>::value < get_address<T2>::value)>
+			{
+			};
+			template <typename T1, typename U1, typename T2, typename U2>
+			struct indexed_action_less<action<T1, U1>, action<T2, U2>>
+				: mpl::bool_<(get_address<T1>::value < get_address<T2>::value)>
+			{
+			};
 		}
 	}
 }

@@ -96,7 +96,7 @@ namespace bit{
 
 //Action factories which turn a field_location into an Action
 	template<typename T>
-	constexpr inline std::enable_if<detail::is_field_location<T>::value,action<T,read_action>>
+	constexpr inline typename std::enable_if<detail::is_field_location<T>::value,action<T,read_action>>::type
 	read(T){
 		return {};
 	}
@@ -107,7 +107,7 @@ namespace bit{
 	}
 
 	template<typename T>
-	constexpr std::enable_if<detail::is_field_location<T>::value,typename detail::set<T>::type>
+	constexpr typename std::enable_if<detail::is_field_location<T>::value,typename detail::set<T>::type>::type
 	set(T){
 		return {};
 	}
@@ -118,7 +118,7 @@ namespace bit{
 	}
 
 	template<typename T>
-	constexpr std::enable_if<detail::is_field_location<T>::value,typename detail::clear<T>::type>
+	constexpr typename std::enable_if<detail::is_field_location<T>::value,typename detail::clear<T>::type>::type
 	clear(T){
 		return {};
 	}
@@ -129,7 +129,7 @@ namespace bit{
 	}
 
 	template<typename T>
-	constexpr std::enable_if<detail::is_field_location<T>::value,typename detail::reset<T>::type>
+	constexpr typename std::enable_if<detail::is_field_location<T>::value,typename detail::reset<T>::type>::type
 	reset(T){
 		static_assert(detail::is_set_to_clear<T>::value,"Access violation: bit::reset only works on set to clear bit");
 		return {};
@@ -144,7 +144,7 @@ namespace bit{
 	//Write of runtime value
 	//T must be bit location or function will be removed from overload set
 	template<typename T>
-	constexpr inline std::enable_if<detail::is_field_location<T>::value,action<T,write_action>>
+	constexpr inline typename std::enable_if<detail::is_field_location<T>::value,action<T,write_action>>::type
 	write(T,typename detail::get_field_type<T>::type in){
 		static_assert(detail::is_writable<T>::value,"Access violation: The field_location provided is not marked as writable");
 		return action<T, write_action>{detail::get_mask<T>::value & (unsigned(in) << detail::mask_starts_at(detail::get_mask<T>::value))};
@@ -154,9 +154,9 @@ namespace bit{
 	//T must be bit location or function will be removed from overload set
 	//U mst be compile time value or function will be removed from overload set
 	template<typename T, typename U>
-	constexpr inline std::enable_if<
+	constexpr inline typename std::enable_if<
 		(detail::is_field_location<T>::value && mpl::is_integral<U>{}),
-		typename detail::write<T, detail::value_to_unsigned<U>::value>>
+		typename detail::write<T, detail::value_to_unsigned<U>::value>>::type
 	write(T, U) {
 		static_assert(detail::write_location_and_compile_time_value_types_are_same<T, U>::value, "type mismatch: the field_location field type and the compile time Value type must be the same");
 		return { };

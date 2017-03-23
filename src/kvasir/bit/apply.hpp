@@ -54,53 +54,21 @@ namespace bit
         template <typename T>
         using MakeSeperators = MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<T, mpl::less_than>>;
 
-        // an index action consists of an action (possibly merged) and
-        // the inputs including masks which it needs
-        template <typename TAction, typename... TInputs>
-        struct IndexedAction
-        {
-            using type = IndexedAction<TAction, TInputs...>;
-        };
 
-        template <typename T>
-        struct GetAction;
-        template <typename A, typename... T>
-        struct GetAction<IndexedAction<A, T...>>
-        {
-            using type = A;
-        };
 
-        template <typename F, typename A>
-        struct GetAction<action<F, A>>
-        {
-            using type = action<F, A>;
-        };
+
 
         template <typename T>
         struct GetInputsImpl;
         template <typename A, typename... T>
-        struct GetInputsImpl<IndexedAction<A, T...>>
+        struct GetInputsImpl<indexed_action<A, T...>>
         {
             using type = MakeSeperators<mpl::list<T...>>;
         };
         template <typename T>
         using GetInputs = typename GetInputsImpl<T>::type;
 
-        // predicate returning result of left < right for bitOptions
-        template <typename TLeft, typename TRight>
-        struct IndexedActionLess;
-        template <typename T1, typename U1, typename T2, typename U2, typename... TInputs1,
-                  typename... TInputs2>
-        struct IndexedActionLess<IndexedAction<action<T1, U1>, TInputs1...>,
-                                 IndexedAction<action<T2, U2>, TInputs2...>>
-            : mpl::bool_<(get_address<T1>::value < get_address<T2>::value)>
-        {
-        };
-        template <typename T1, typename U1, typename T2, typename U2>
-        struct IndexedActionLess<action<T1, U1>, action<T2, U2>>
-            : mpl::bool_<(get_address<T1>::value < get_address<T2>::value)>
-        {
-        };
+
 
         template <typename Tbits, typename TRet = mpl::list<>> // default
         struct MergebitActions;
@@ -119,19 +87,19 @@ namespace bit
                   typename... Us> // next input and last merged are mergable
         struct MergebitActions<
             mpl::list<
-                IndexedAction<action<field_location<Taddress, Mask1, TAccess1, TFieldType1>,
+			indexed_action<action<field_location<Taddress, Mask1, TAccess1, TFieldType1>,
                                      TActionTemplate<Value1>>,
                               TInputs1...>,
                 Ts...>,
             mpl::list<
-                IndexedAction<action<field_location<Taddress, Mask2, TAccess2, TFieldType2>,
+			indexed_action<action<field_location<Taddress, Mask2, TAccess2, TFieldType2>,
                                      TActionTemplate<Value2>>,
                               TInputs2...>,
                 Us...>>
             : MergebitActions<
                   mpl::list<Ts...>,
                   mpl::list<
-                      IndexedAction<action<field_location<Taddress,
+			indexed_action<action<field_location<Taddress,
                                                          (Mask1 | Mask2), // merge
                                                          TAccess1>, // dont care, plausibility check
                                                                     // has already been done
@@ -192,7 +160,7 @@ namespace bit
         struct MergeActionSteps<mpl::list<Ts...>>
         {
             using type = mpl::list<MergebitActionsT<
-                mpl::sort<mpl::flatten<Ts>, detail::IndexedActionLess>
+                mpl::sort<mpl::flatten<Ts>, detail::indexed_action_less>
                 >...>;
         };
 
@@ -200,64 +168,9 @@ namespace bit
         using MergeActionStepsT = typename MergeActionSteps<T>::type;
 
         template <typename TAction, typename... TInputs>
-        struct get_address<IndexedAction<TAction, TInputs...>> : get_address<TAction>
+        struct get_address<indexed_action<TAction, TInputs...>> : get_address<TAction>
         {
         };
-
-        template <bool TopLevel, typename TAction, typename Index>
-        struct MakeIndexedActionImpl;
-        // in default case there is no actual expected input
-        template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
-                  typename TAction, int Index>
-        struct MakeIndexedActionImpl<
-            TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, TAction>, int_<Index>>
-        {
-            using type = IndexedAction<action<field_location<Taddress, Mask, TAccess, TR>, TAction>>;
-        };
-
-        // special case where there actually is expected input
-        template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
-                  int Index>
-        struct MakeIndexedActionImpl<
-            TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, write_action>, int_<Index>>
-        {
-            static_assert(
-                TopLevel,
-                "runtime values can only be executed in an apply, they cannot be stored in a list");
-            using type =
-                IndexedAction<action<field_location<Taddress, Mask, TAccess, TR>, write_action>,
-                              mpl::uint_<Index>>;
-        };
-
-        // special case where there actually is expected input
-        template <bool TopLevel, typename Taddress, unsigned Mask, typename TAccess, typename TR,
-                  int Index>
-        struct MakeIndexedActionImpl<
-            TopLevel, action<field_location<Taddress, Mask, TAccess, TR>, xor_action>, mpl::int_<Index>>
-        {
-            static_assert(
-                TopLevel,
-                "runtime values can only be executed in an apply, they cannot be stored in a list");
-            using type =
-                IndexedAction<action<field_location<Taddress, Mask, TAccess, TR>, write_action>,
-                              mpl::uint_<Index>>;
-        };
-
-        // special case where a list of actions is passed
-        template <bool TopLevel, typename... Ts, typename Index>
-        struct MakeIndexedActionImpl<TopLevel, mpl::list<Ts...>, Index>
-        {
-            using type = mpl::list<typename MakeIndexedActionImpl<false, Ts, Index>::type...>;
-        };
-        // special case where a sequence point is passed
-        template <bool TopLevel, typename Index>
-        struct MakeIndexedActionImpl<TopLevel, sequence_point_t, Index>
-        {
-            using type = sequence_point_t;
-        };
-
-        template <typename TAction, typename Index>
-        using MakeIndexedAction = typename MakeIndexedActionImpl<true, TAction, Index>::type;
 
         template <unsigned I>
         struct IsaddressPred
@@ -390,7 +303,7 @@ namespace bit
         void noReadNoRuntimeWriteApply(mpl::list<TActions...> *)
         {
             const unsigned a[]{0U, execute_seam<TActions, ::kvasir::Tag::User>{}(0U)...};
-            ignore(a);
+			(void)a;
         }
 
     }
@@ -404,12 +317,12 @@ namespace bit
         static_assert(detail::args_to_apply_are_plausible<Args...>::value,
                       "one of the supplied arguments is not supported");
         using IndexedActions =
-            mpl::c::call<mpl::c::transform<mpl::lambda<detail::MakeIndexedAction>>, mpl::list<Args...>, mpl::make_int_sequence<mpl::int_<sizeof...(Args)>>>;
+            mpl::c::call<mpl::c::zip_with<mpl::c::cfe<detail::make_indexed_action>>, mpl::list< mpl::list<Args...>, mpl::make_int_sequence<mpl::int_<sizeof...(Args)>>>>;
         using FlattenedActions = mpl::flatten<IndexedActions>;
-        using Steps = mpl::split_if<FlattenedActions, mpl::bind1<std::is_same, SequencePoint>::template f>;
+        using Steps = mpl::split_if<FlattenedActions, mpl::c::same_as<sequence_point_t>::template f>;
         using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
-        using Functors = mpl::transform<Actions, detail::GetAction>;
+        using Functors = mpl::c::call<mpl::c::transform<mpl::c::cfl<detail::get_action>>,Actions>;
         using Inputs =
             mpl::transform<Actions, detail::GetInputs>; // list of lists of lits
                                                                             // of unsigned
@@ -443,8 +356,10 @@ namespace bit
     {
         static_assert(detail::args_to_apply_are_plausible<Args...>::value,
                       "one of the supplied arguments is not supported");
-        using FlattenedActions = mpl::flatten<mpl::list<Args...>>;
-		using Steps = mpl::split_if<FlattenedActions, mpl::bind1<std::is_same, SequencePoint>::template f>;
+
+		namespace c = kvasir::mpl::c;
+        using FlattenedActions = c::ucall<c::flatten<>,Args...>;
+		using Steps = c::call<c::split_if<c::same_as<sequence_point_t>>,FlattenedActions>;
         using Merged = detail::MergeActionStepsT<Steps>;
         using Actions = mpl::flatten<Merged>;
         using Functors = mpl::transform<Actions, detail::GetAction>;
@@ -459,7 +374,7 @@ namespace bit
     template <typename TField, typename TField::DataType Value>
     inline bool fieldEquals(field_value<TField, Value>)
     {
-        return apply(Action<TField, read_action>{}) == Value;
+        return apply(action<TField, read_action>{}) == Value;
     }
 }
 }

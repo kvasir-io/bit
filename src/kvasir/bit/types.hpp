@@ -55,7 +55,7 @@ namespace bit{
 	template<typename TLocation, typename TAction>
 	struct action {
 		template<typename... Ts>
-		constexpr action(Ts...args) :TAction{ args... } {}
+		constexpr action(Ts...args) {}
 	};
 	template<typename TLocation>
 	struct action<TLocation, write_action> {
