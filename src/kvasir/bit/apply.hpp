@@ -52,7 +52,7 @@ namespace bit
         };
 
         template <typename T>
-        using MakeSeperators = MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::sort<T, mpl::less_than>>;
+        using MakeSeperators = MakeSeperatorsImpl<0, mpl::list<>, mpl::list<>, mpl::eager::sort<T, mpl::less_than>>;
 
 
 
@@ -160,7 +160,7 @@ namespace bit
         struct MergeActionSteps<mpl::list<Ts...>>
         {
             using type = mpl::list<MergebitActionsT<
-                mpl::sort<mpl::flatten<Ts>, detail::indexed_action_less>
+                mpl::eager::sort<mpl::eager::flatten<Ts>, detail::indexed_action_less>
                 >...>;
         };
 
@@ -258,10 +258,10 @@ namespace bit
             using ReturnType = field_tuple<mpl::list<TRetaddresses...>, TRetLocations>;
             template <unsigned A>
 
-                typename std::enable_if<mpl::c::ucall<mpl::c::any<mpl::c::same_as<mpl::uint_<A>>>, TRetaddresses...>::value>
+                typename std::enable_if<mpl::call<mpl::any<mpl::same_as<mpl::uint_<A>>>, TRetaddresses...>::value>
                 filterReturns(ReturnType & ret, unsigned in)
             {
-					ret.value_[mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, mpl::uint_<A>>, mpl::c::offset<mpl::uint_<sizeof...(TRetaddresses)>>>, mpl::list<TRetaddresses...>>::value] |= in;
+					ret.value_[mpl::call<mpl::find_if<mpl::same_as<mpl::uint_<A>>, mpl::offset<mpl::uint_<sizeof...(TRetaddresses)>>>, TRetaddresses...>::value] |= in;
             }
             template <unsigned A>
             void filterReturns(...)

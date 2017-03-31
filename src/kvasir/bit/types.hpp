@@ -141,7 +141,7 @@ namespace bit{
 		template<typename Object, typename Tfield_location>
 		struct get_field_location_index;
 		template<typename TA, typename TLocations, typename Tfield_location>
-		struct get_field_location_index<field_tuple<TA, TLocations>, Tfield_location> : mpl::c::call<mpl::c::find_if<mpl::c::is_same<Tfield_location>,mpl::c::front>, TLocations> {};
+		struct get_field_location_index<field_tuple<TA, TLocations>, Tfield_location> : mpl::call<mpl::unpack<mpl::find_if<mpl::is_same<Tfield_location>,mpl::front>>, TLocations> {};
 
 		template<typename Object, typename Tfield_location>
 		using get_field_location_index_t = typename get_field_location_index<Object, Tfield_location>::Type;
@@ -151,7 +151,7 @@ namespace bit{
 	struct field_tuple<mpl::list<mpl::uint_<Is>...>,mpl::list<field_location<TAs,Masks,TAccesss,TRs>...>>{
 		unsigned value_[sizeof...(Is)];
 		template<std::size_t Index>
-		mpl::at<mpl::list<TRs...>, Index> get() const{
+		mpl::eager::at<mpl::list<TRs...>, Index> get() const{
 			using namespace mpl;
 			using address = mpl::uint_<mpl::at<mpl::list<TAs...>, Index>::value>;
 			constexpr unsigned index = sizeof...(Is) - mpl::c::call<mpl::c::find_if<mpl::bind1<std::is_same, address>,mpl::c::size>, mpl::list<mpl::uint_<Is>...>>::value;
@@ -173,7 +173,7 @@ namespace bit{
 			DoNotUse(T){}
 		};
 		//implicitly convertible to the field type only if there is just one field
-		using ConvertableTo = typename std::conditional < (sizeof...(TRs) == 1), mpl::at<mpl::list<TRs...>,0>, DoNotUse>::type;
+		using ConvertableTo = typename std::conditional < (sizeof...(TRs) == 1), mpl::eager::at<mpl::list<TRs...>,0>, DoNotUse>::type;
 		operator ConvertableTo() {
 			constexpr unsigned mask = getFirst(Masks...);
 			return ConvertableTo((value_[0] & mask) >> detail::position_of_first_set_bit(mask));
